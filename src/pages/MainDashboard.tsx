@@ -61,7 +61,7 @@ const DashboardContent = () => {
             <div>
               <p className="text-sm font-semibold text-gray-400">Parcels on Move</p>
               <p className="text-2xl font-extrabold text-gray-900">
-                156 <span className="text-gray-500 font-semibold">/ 350</span>
+                156 <span className="text-gray-500 font-semibold"><span className="text-green-500">/ 350</span></span>
               </p>
             </div>
             <div className="bg-green-500 p-3 rounded-lg">

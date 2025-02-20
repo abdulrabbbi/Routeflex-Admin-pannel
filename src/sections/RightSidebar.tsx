@@ -1,6 +1,8 @@
 import { IoClose, IoNotifications } from "react-icons/io5"
 import { MdCheck, MdClose } from "react-icons/md"
 import { Images } from "../assets/images"
+import { useState } from "react"
+import Chat from "../components/ChatPopup"
 
 const notifications = [
    { id: 1, title: "Order delivered", time: "Just now" },
@@ -22,6 +24,8 @@ const contacts = [
 ]
 
 const RightSidebar = ({ isOpen, setIsOpen }: any) => {
+   const [activeChat, setActiveChat] = useState(null)
+
    return (
       <>
          {/* Mobile backdrop */}
@@ -32,7 +36,7 @@ const RightSidebar = ({ isOpen, setIsOpen }: any) => {
          {/* Sidebar */}
          <div
             className={`
-        fixed lg:static inset-y-0 right-0 w-80 bg-white transform
+        fixed lg:static inset-y-0 right-0 w-80 bg-white transform z-[1001]
         ${isOpen ? "translate-x-0" : "translate-x-full"}
         lg:translate-x-0 transition-transform duration-200 ease-in-out
         border-l z-30 overflow-y-auto
@@ -105,20 +109,24 @@ const RightSidebar = ({ isOpen, setIsOpen }: any) => {
                      <button className="text-green-500 text-sm">Show All</button>
                   </div>
                   <div className="space-y-4">
-                     {contacts.map((contact) => (
-                        <div key={contact.id} className="flex items-center gap-3">
+                     {contacts.map((contact: any) => (
+                        <button
+                           onClick={() => setActiveChat(contact)}
+                           key={contact.id} className="flex items-center gap-3">
                            <img
                               src={contact.avatar || "/placeholder.svg"}
                               alt={contact.name}
                               className="h-10 w-10 rounded-full"
                            />
                            <p className="font-medium">{contact.name}</p>
-                        </div>
+                        </button>
                      ))}
                   </div>
                </div>
             </div>
          </div>
+         {activeChat && <Chat contact={activeChat} onClose={() => setActiveChat(null)} />}
+
       </>
    )
 }

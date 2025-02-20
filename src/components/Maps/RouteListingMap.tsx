@@ -41,16 +41,20 @@ const ZoomControl = () => {
 };
 
 // Type Definitions
-interface MapProps {
-  route: [number, number][];
-  currentLocation: { lat: number; lng: number };
+interface RouteListingMapProps {
+  routes: [number, number][][]; // Array of multiple routes
+  startLocation: { lat: number; lng: number };
+  endLocation: { lat: number; lng: number };
 }
 
-const Map = ({ route, currentLocation }: MapProps) => {
+const RouteListingMap = ({ routes, startLocation, endLocation }: RouteListingMapProps) => {
   // Default to Saddar, Rawalpindi if no location is provided
-  const center = currentLocation
-    ? ([currentLocation.lat, currentLocation.lng] as [number, number])
+  const center = startLocation
+    ? ([startLocation.lat, startLocation.lng] as [number, number])
     : ([33.5973, 73.0479] as [number, number]);
+
+  // Colors for different routes
+  const routeColors = ["#22c55e", "#ff5733", "#007bff"]; // Green, Red, Blue
 
   return (
     <div className="relative rounded-xl overflow-hidden shadow-sm border border-gray-200">
@@ -72,7 +76,7 @@ const Map = ({ route, currentLocation }: MapProps) => {
       {/* Map */}
       <MapContainer
         center={center}
-        zoom={15}
+        zoom={14}
         className="h-[500px] w-full"
         zoomControl={false}
       >
@@ -80,12 +84,20 @@ const Map = ({ route, currentLocation }: MapProps) => {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" // Light theme
         />
-        <Polyline positions={route} pathOptions={{ color: "#22c55e", weight: 4 }} />
+
+        {/* Multiple Routes */}
+        {routes.map((route, index) => (
+          <Polyline key={index} positions={route} pathOptions={{ color: routeColors[index % routeColors.length], weight: 4 }} />
+        ))}
+
+        {/* Start & End Markers */}
         <Marker position={center} icon={vehicleIcon} />
+        <Marker position={[endLocation.lat, endLocation.lng]} icon={vehicleIcon} />
+
         <ZoomControl />
       </MapContainer>
     </div>
   );
 };
 
-export default Map;
+export default RouteListingMap;

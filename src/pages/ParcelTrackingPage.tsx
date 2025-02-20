@@ -4,17 +4,19 @@ import { useState } from "react"
 import Map from "../components/Maps/TrackingMap"
 import DriverTracking from "../components/DriverTracking"
 import ParcelTracking from "../components/ParcelTracking"
+import ParcelMap from "../components/Maps/ParcelMap"
 
 const ParcelTrackingPage = () => {
    const [OrderId, setOrderId] = useState("")
 
-   const route: [number, number][] = [
-      [33.6007, 73.0679], // Start
-      [33.6034, 73.0724],
-      [33.6045, 73.0768],
-      [33.6056, 73.0815], // End
-   ]
-
+   const cars = [
+      { lat: 33.5973, lng: 73.0479 }, // Near Saddar Metro Station
+      { lat: 33.5955, lng: 73.0498 }, // Near Mall Plaza
+      { lat: 33.5987, lng: 73.0505 }, // Near GPO Saddar
+      { lat: 33.5962, lng: 73.0451 }, // Near GHQ Rawalpindi
+      { lat: 33.5991, lng: 73.0480 }, // Near PC Hotel Rawalpindi
+    ];
+    
    const currentLocation = {
       lat: 33.6034,
       lng: 73.0724,
@@ -44,7 +46,7 @@ const ParcelTrackingPage = () => {
    return (
       <div className="min-h-screen bg-gray-50 p-6">
          <div className="max-w-7xl mx-auto space-y-6">
-            <Map route={route} currentLocation={currentLocation} />
+            <ParcelMap cars={cars}/>
             <ParcelTracking OrderId={OrderId} setOrderId={setOrderId} OrderData={OrderData} />
          </div>
       </div>

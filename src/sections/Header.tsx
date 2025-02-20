@@ -1,7 +1,22 @@
-import { MdMenu, MdSearch, MdLightMode, MdNotifications } from "react-icons/md"
-import { Images } from "../assets/images"
+import { MdMenu, MdSearch, MdLightMode, MdNotifications } from "react-icons/md";
+import { Images } from "../assets/images";
+import { useLocation } from "react-router-dom";
 
 const Header = ({ onMenuClick, onNotificationClick }: any) => {
+   const location = useLocation();
+
+   // Explicit mapping of paths to human-readable names
+   const routeNames: { [key: string]: string } = {
+      "/": "Dashboard",
+      "/tracking": "Driver Tracking",
+      "/parcel-tracking": "Parcel Tracking",
+      "/route-listing": "Route Listing",
+      "/payments": "Payment",
+      "/settings": "Settings",
+   };
+
+   const getPathName = () => routeNames[location.pathname] || "Dashboard"; // Default to "Dashboard" if not found
+
    return (
       <header className="h-16 border-b bg-white">
          <div className="h-full px-4 flex items-center">
@@ -12,9 +27,9 @@ const Header = ({ onMenuClick, onNotificationClick }: any) => {
 
             {/* Breadcrumbs */}
             <nav className="hidden sm:flex items-center space-x-4 ml-4">
-               <span className="text-sm font-medium">Dashboards</span>
+               <span className="text-sm font-medium">Dashboard</span>
                <span className="text-sm text-gray-500">/</span>
-               <span className="text-sm font-medium">Default</span>
+               <span className="text-sm font-medium">{getPathName()}</span>
             </nav>
 
             <div className="ml-auto flex items-center space-x-4">
@@ -43,8 +58,7 @@ const Header = ({ onMenuClick, onNotificationClick }: any) => {
             </div>
          </div>
       </header>
-   )
-}
+   );
+};
 
-export default Header
-
+export default Header;

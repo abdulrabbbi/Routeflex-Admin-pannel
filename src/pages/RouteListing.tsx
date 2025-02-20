@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import RouteForm from "../components/RouteForm"
-import OrderDetails from "../components/OrderDetails"
-import ExistingRoutes from "../components/ExistingRoute"
-import SpecificInstructions from "../components/SpecificInstruction"
-import RouteListingMap from "../components/Maps/RouteListingMap"
+import { useState } from "react";
+import RouteForm from "../components/RouteForm";
+import OrderDetails from "../components/OrderDetails";
+import ExistingRoutes from "../components/ExistingRoute";
+import SpecificInstructions from "../components/SpecificInstruction";
+import RouteListingMap from "../components/Maps/RouteListingMap";
 
 const RouteListing = () => {
   const [routes, setRoutes] = useState([
@@ -31,7 +31,7 @@ const RouteListing = () => {
         time: "03:00 PM",
       },
     },
-  ])
+  ]);
 
   const mapRoutes: [number, number][][] = [
     [
@@ -59,12 +59,16 @@ const RouteListing = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
+        {/* Page Title */}
         <h1 className="text-2xl font-semibold text-[#1e1e38]">Route Listing</h1>
 
-        <RouteListingMap routes={mapRoutes} startLocation={startLocation} endLocation={endLocation} />;
+        {/* Map Section */}
+        <div className="w-full">
+          <RouteListingMap routes={mapRoutes} startLocation={startLocation} endLocation={endLocation} />
+        </div>
 
-
-        <div className="grid lg:grid-cols-2 gap-8">
+        {/* Forms & Details */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-8">
             <RouteForm />
             <OrderDetails />
@@ -77,8 +81,7 @@ const RouteListing = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default RouteListing
-
+export default RouteListing;

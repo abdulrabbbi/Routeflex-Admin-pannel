@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { MdEmail, MdLock } from 'react-icons/md'
+import { Images } from '../../assets/images'
 
 const LoginPage = () => {
    const [formData, setFormData] = useState({
@@ -18,7 +19,8 @@ const LoginPage = () => {
          <div className="sm:mx-auto sm:w-full sm:max-w-md">
             <div className="text-center">
                <h2 className="text-3xl font-bold">
-                  Road<span className="text-[#22c55e]">Flex</span>
+                  {/* Road<span className="text-[#22c55e]">Flex</span> */}
+                  <img src={Images.Logo}/>
                </h2>
                <p className="mt-2 text-sm text-gray-600">
                   Sign in to your account to continue

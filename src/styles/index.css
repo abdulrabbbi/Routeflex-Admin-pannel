@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import 'leaflet/dist/leaflet.css';
+@import "leaflet/dist/leaflet.css";
 
 /* @font-face {
   font-family: 'Robotto';
@@ -12,29 +12,29 @@
 } */
 
 @font-face {
-  font-family: 'Poppins-Regular';
+  font-family: "Poppins-Regular";
   font-weight: 400;
-  src: url('../assets/fonts/Poppins-Regular.ttf') format('truetype');
+  src: url("../assets/fonts/Poppins-Regular.ttf") format("truetype");
 }
 
 @font-face {
-  font-family: 'Poppins-Medium';
+  font-family: "Poppins-Medium";
   font-weight: 500;
-  src: url('../assets/fonts/Poppins-Medium.ttf') format('truetype');
+  src: url("../assets/fonts/Poppins-Medium.ttf") format("truetype");
 }
 
 @font-face {
-  font-family: 'Poppins-SemiBold';
+  font-family: "Poppins-SemiBold";
   font-weight: 600;
-  src: url('../assets/fonts/Poppins-SemiBold.ttf') format('truetype');
+  src: url("../assets/fonts/Poppins-SemiBold.ttf") format("truetype");
 }
 
 @font-face {
-  font-family: 'Poppins-Bold';
+  font-family: "Poppins-Bold";
   font-weight: 700;
-  src: url('../assets/fonts/Poppins-Bold.ttf') format('truetype');
+  src: url("../assets/fonts/Poppins-Bold.ttf") format("truetype");
 }
- 
+
 body {
   @apply bg-gray-50;
 }
@@ -56,4 +56,22 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
+}
+
+.loader {
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #3498db;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }

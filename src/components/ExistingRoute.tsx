@@ -1,52 +1,92 @@
-import { MdLocationOn } from "react-icons/md"
+import { MdLocationOn } from "react-icons/md";
+import { memo } from "react";
 
-const ExistingRoutes = ({ routes }: any) => {
-   return (
-      <div className="space-y-4">
-         {routes.map((route: any) => (
-            <div key={route.id} className="bg-[#f0fdf4] p-6 rounded-xl">
-               <h3 className="text-lg font-semibold text-[#1e1e38] mb-6">Route {route.id}</h3>
-
-               <div className="grid grid-cols-[auto,1fr,auto] gap-x-4 gap-y-6">
-                  {/* Pickup */}
-                  <div className="p-1.5 bg-[#22c55e] rounded-full mt-1 h-fit">
-                     <MdLocationOn className="w-4 h-4 text-white" />
-                  </div>
-
-                  <div>
-                     <div className="text-sm font-medium text-[#1e1e38]">Pickup Location</div>
-                     <div className="text-[#22c55e]">{route.pickup.location}</div>
-                  </div>
-
-                  <div>
-                     <div className="text-sm font-medium text-[#1e1e38]">Pickup Time</div>
-                     <div className="text-[#22c55e]">{route.pickup.time}</div>
-                  </div>
-
-                  {/* Vertical Line */}
-                  <div className="w-0.5 h-8 bg-[#22c55e] opacity-20 ml-[11px]" />
-                  <div className="col-span-2" />
-
-                  {/* Delivery */}
-                  <div className="p-1.5 bg-[#22c55e] rounded-full mt-1 h-fit">
-                     <MdLocationOn className="w-4 h-4 text-white" />
-                  </div>
-
-                  <div>
-                     <div className="text-sm font-medium text-[#1e1e38]">Delivery Location</div>
-                     <div className="text-[#22c55e]">{route.delivery.location}</div>
-                  </div>
-
-                  <div>
-                     <div className="text-sm font-medium text-[#1e1e38]">Delivered at</div>
-                     <div className="text-[#22c55e]">{route.delivery.time}</div>
-                  </div>
-               </div>
-            </div>
-         ))}
-      </div>
-   )
+interface FormattedRoute {
+  id: number;
+  pickup: {
+    location: string;
+    time: string;
+  };
+  delivery: {
+    locations: string[];
+    time: string;
+  };
 }
 
-export default ExistingRoutes
+interface ExistingRoutesProps {
+  routes: FormattedRoute[];
+}
 
+const ExistingRoutes = memo(({ routes }: ExistingRoutesProps) => {
+  return (
+    <div className="space-y-6">
+      {routes.map((route) => (
+        <div key={route.id} className="bg-[#f0fdf4] p-6 rounded-xl shadow-sm">
+          <h3 className="text-xl font-semibold text-[#1e1e38] mb-4">
+            Route #{route.id}
+          </h3>
+
+          <div className="grid grid-cols-[auto,1fr,auto] gap-x-4 gap-y-4">
+            {/* Pickup */}
+            <div className="p-2 bg-[#22c55e] rounded-full h-fit mt-1">
+              <MdLocationOn className="w-4 h-4 text-white" />
+            </div>
+
+            <div>
+              <div className="text-sm text-gray-700 font-medium">Pickup Location</div>
+              <div className="text-[#22c55e]">{route.pickup.location}</div>
+            </div>
+
+            <div>
+              <div className="text-sm text-gray-700 font-medium">Pickup Time</div>
+              <div className="text-[#22c55e]">{route.pickup.time}</div>
+            </div>
+
+            {/* Connecting line */}
+            <div className="ml-[13px] w-0.5 h-6 bg-[#22c55e] opacity-30" />
+            <div className="col-span-2" />
+
+            {/* Deliveries */}
+            {route.delivery.locations.map((location, index) => (
+              <div key={index} className="contents">
+                <div className="p-2 bg-[#22c55e] rounded-full h-fit mt-1">
+                  <MdLocationOn className="w-4 h-4 text-white" />
+                </div>
+
+                <div>
+                  <div className="text-sm text-gray-700 font-medium">
+                    Delivery Location {index + 1}
+                  </div>
+                  <div className="text-[#22c55e]">{location}</div>
+                </div>
+
+                <div>
+                  {index === 0 ? (
+                    <>
+                      <div className="text-sm text-gray-700 font-medium">Delivery Time</div>
+                      <div className="text-[#22c55e]">{route.delivery.time}</div>
+                    </>
+                  ) : (
+                    <div className="text-sm text-gray-400 italic pt-1">—</div>
+                  )}
+                </div>
+
+                {/* Line between deliveries */}
+                {index !== route.delivery.locations.length - 1 && (
+                  <>
+                    <div className="ml-[13px] w-0.5 h-6 bg-[#22c55e] opacity-30" />
+                    <div className="col-span-2" />
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+});
+
+ExistingRoutes.displayName = "ExistingRoutes";
+
+export default ExistingRoutes;

@@ -1,52 +1,101 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Map from "../components/Maps/TrackingMap"
-import DriverTracking from "../components/DriverTracking"
+import { useState, useCallback } from "react";
+import Map from "../components/Maps/TrackingMap";
+import DriverTracking from "../components/DriverTracking";
+import DriversTable from "../components/DriversTable";
+import { getDriverTracking, reverseGeocode } from "../api/deliveryService";
 
-const TrackingPage = () => {
-   const [driverId, setDriverId] = useState("")
-
-   const route: [number, number][] = [
-      [33.6007, 73.0679], // Start
-      [33.6034, 73.0724],
-      [33.6045, 73.0768],
-      [33.6056, 73.0815], // End
-   ]
-
-   const currentLocation = {
-      lat: 33.6034,
-      lng: 73.0724,
-      address: "12-31 Groove Street, New York",
-   }
-
-   const driverData = {
-      currentLocation: "Parcel delivery to H-Block Frances Town, New York",
-      currentTask: "Parcel delivery to H-Block Frances Town, New York",
-      totalOrders: 115,
-      doneDeliveries: 20,
-      stopsLeft: 100,
-      currentTaskDetails: {
-         pickup: {
-            location: "15/1 Destrom Street, New York",
-            time: "02:00 PM",
-         },
-         delivery: {
-            location: "12-31 Groove Street, New York",
-            time: "03:00 PM",
-         },
-      },
-   }
-
-   return (
-      <div className="min-h-screen bg-gray-50 p-6">
-         <div className="max-w-7xl mx-auto space-y-6">
-            <Map route={route} currentLocation={currentLocation} />
-            <DriverTracking driverId={driverId} setDriverId={setDriverId} driverData={driverData} />
-         </div>
-      </div>
-   )
+interface CurrentLocation {
+  lat: number;
+  lng: number;
+  address: string;
 }
 
-export default TrackingPage
+interface DriverData {
+  currentLocation: string;
+  currentTask: string;
+  totalOrders: number;
+  doneDeliveries: number;
+  stopsLeft: number;
+  currentTaskDetails: {
+    pickup: {
+      location: string;
+      time: string;
+    };
+    delivery: {
+      location: string;
+      time: string;
+    };
+  };
+}
 
+const TrackingPage = () => {
+  const [driverId, setDriverId] = useState<string>("");
+  const [driverData, setDriverData] = useState<DriverData | null>(null);
+  const [route, setRoute] = useState<[number, number][]>([]);
+  const [currentLocation, setCurrentLocation] =
+    useState<CurrentLocation | null>(null);
+
+  const handleTrackDriver = useCallback(async () => {
+    if (!driverId) return;
+    try {
+      const data = await getDriverTracking(driverId);
+      const address = await reverseGeocode(
+        data.currentLocation.coordinates[1],
+        data.currentLocation.coordinates[0]
+      );
+
+      setDriverData({
+        currentLocation: address,
+        currentTask: data.currentTask,
+        totalOrders: data.totalOrders,
+        doneDeliveries: data.doneDeliveries,
+        stopsLeft: data.stopsLeft,
+        currentTaskDetails: {
+          pickup: {
+            location: data.currentTaskDetails?.pickupLocation || "N/A",
+            time: data.currentTaskDetails?.pickupTime || "N/A",
+          },
+          delivery: {
+            location: data.currentTaskDetails?.deliveryLocation || "N/A",
+            time: data.currentTaskDetails?.deliveryTime || "N/A",
+          },
+        },
+      });
+
+      setRoute([
+        [
+          data.currentLocation.coordinates[1],
+          data.currentLocation.coordinates[0],
+        ],
+      ]);
+      setCurrentLocation({
+        lat: data.currentLocation.coordinates[1],
+        lng: data.currentLocation.coordinates[0],
+        address,
+      });
+    } catch (error) {
+      console.error("Failed to fetch driver tracking", error);
+    }
+  }, [driverId]);
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {currentLocation && (
+          <Map route={route} currentLocation={currentLocation} />
+        )}
+        <DriverTracking
+          driverId={driverId}
+          setDriverId={setDriverId}
+          driverData={driverData}
+          onTrackDriver={handleTrackDriver}
+        />
+        <DriversTable />
+      </div>
+    </div>
+  );
+};
+
+export default TrackingPage;

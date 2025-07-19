@@ -40,6 +40,12 @@ const ZoomControl = () => {
   );
 };
 
+const RecenterMap = ({ center }: { center: [number, number] }) => {
+  const map = useMap();
+  map.setView(center);
+  return null;
+};
+
 // Type Definitions
 interface RouteListingMapProps {
   routes: [number, number][][]; // Array of multiple routes
@@ -80,6 +86,7 @@ const RouteListingMap = ({ routes, startLocation, endLocation }: RouteListingMap
         className="h-[500px] w-full"
         zoomControl={false}
       >
+        <RecenterMap center={center} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" // Light theme

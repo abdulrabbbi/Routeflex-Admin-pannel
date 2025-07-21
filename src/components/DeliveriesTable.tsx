@@ -67,7 +67,7 @@ const DeliveriesTable: React.FC = React.memo(() => {
 
   return (
     <div className="p-4">
-      <h2 className="text-lg font-semibold mb-4">Deliveries List</h2>
+      <h2 className="text-lg font-semibold mb-4">Parcels List</h2>
 
       <ConfirmModal
         isOpen={modalOpen}
@@ -82,7 +82,7 @@ const DeliveriesTable: React.FC = React.memo(() => {
           <thead>
             <tr className="bg-[#f0fdf4]">
               <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">
-                Delivery ID
+                Parcel ID
               </th>
               <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">
                 Driver ID

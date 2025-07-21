@@ -27,3 +27,34 @@ export const fetchPaymentReport = async (
     return [];
   }
 };
+
+
+export interface PaymentStats {
+  parcelsOnMove: {
+    current: number;
+    total: number;
+  };
+  paymentReceived: {
+    current: number;
+    total: number;
+  };
+  driversPendingPayment: {
+    current: number;
+    total: number;
+  };
+  last7Days: {
+    completedParcels: number;
+    totalPayments: number;
+    activeDrivers: number;
+  };
+}
+
+export const fetchPaymentStats = async (): Promise<PaymentStats | null> => {
+  try {
+    const response = await apiClient.get("/deliveries/payment-stats");
+    return response.data.data;
+  } catch (error) {
+    console.error("Failed to fetch payment stats", error);
+    return null;
+  }
+};

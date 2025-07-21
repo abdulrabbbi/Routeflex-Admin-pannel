@@ -1,48 +1,50 @@
-import { MdLocalShipping, MdPayments, MdAccountBalance } from "react-icons/md"
+import { MdLocalShipping, MdPayments, MdAccountBalance } from "react-icons/md";
+import { PaymentStats } from "../api/paymentService";
 
-const stats = [
-  {
-    title: "Parcels on Move",
-    value: "156",
-    total: "350",
-    icon: MdLocalShipping,
-  },
-  {
-    title: "Payment received by Businesses",
-    value: "1500",
-    total: "35000",
-    icon: MdPayments,
-  },
-  {
-    title: "Drivers Pending to be Paid",
-    value: "2",
-    total: "15",
-    icon: MdAccountBalance,
-  },
-]
-
-const StatsCards = () => {
-  return (
-    <>
-      {stats.map((stat, index) => (
-        <div key={index} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex justify-between items-start">
-            <div className="space-y-2">
-              <p className="text-sm text-gray-500">{stat.title}</p>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-[#1e1e38]">{stat.value}</span>
-                <span className="text-sm text-[#22c55e]">/ {stat.total}</span>
-              </div>
-            </div>
-            <div className="bg-[#22c55e] bg-opacity-10 p-3 rounded-xl">
-              <stat.icon className="h-6 w-6 text-[#22c55e]" />
-            </div>
-          </div>
-        </div>
-      ))}
-    </>
-  )
+interface StatsCardsProps {
+  stats: PaymentStats | null;
 }
 
-export default StatsCards
+const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
+  if (!stats) return null;
 
+  return (
+    <>
+      <div className="flex items-center justify-between p-4 bg-white rounded shadow">
+        <div>
+          <h3 className="font-semibold text-gray-600">Parcels on Move</h3>
+          <p className="text-xl font-bold">{stats.parcelsOnMove.current} / {stats.parcelsOnMove.total}</p>
+        </div>
+        <MdLocalShipping className="w-10 h-10 text-blue-500" />
+      </div>
+
+      <div className="flex items-center justify-between p-4 bg-white rounded shadow">
+        <div>
+          <h3 className="font-semibold text-gray-600">Payments Received</h3>
+          <p className="text-xl font-bold">{stats.paymentReceived.current} / {stats.paymentReceived.total}</p>
+        </div>
+        <MdPayments className="w-10 h-10 text-green-500" />
+      </div>
+
+      <div className="flex items-center justify-between p-4 bg-white rounded shadow">
+        <div>
+          <h3 className="font-semibold text-gray-600">Drivers Pending Payment</h3>
+          <p className="text-xl font-bold">{stats.driversPendingPayment.current} / {stats.driversPendingPayment.total}</p>
+        </div>
+        <MdAccountBalance className="w-10 h-10 text-orange-500" />
+      </div>
+
+      <div className="flex items-center justify-between p-4 bg-white rounded shadow">
+        <div>
+          <h3 className="font-semibold text-gray-600">Last 7 Days</h3>
+          <p className="text-sm">Completed Parcels: <span className="font-semibold">{stats.last7Days.completedParcels}</span></p>
+          <p className="text-sm">Total Payments: <span className="font-semibold">{stats.last7Days.totalPayments}</span></p>
+          <p className="text-sm">Active Drivers: <span className="font-semibold">{stats.last7Days.activeDrivers}</span></p>
+        </div>
+        <MdLocalShipping className="w-10 h-10 text-purple-500" />
+      </div>
+    </>
+  );
+};
+
+export default StatsCards;

@@ -31,16 +31,16 @@ interface DriverData {
 }
 
 const TrackingPage = () => {
-  const [driverId, setDriverId] = useState<string>("");
+  const [driverTrackingId, setdriverTrackingId] = useState<string>("");
   const [driverData, setDriverData] = useState<DriverData | null>(null);
   const [route, setRoute] = useState<[number, number][]>([]);
   const [currentLocation, setCurrentLocation] =
     useState<CurrentLocation | null>(null);
 
   const handleTrackDriver = useCallback(async () => {
-    if (!driverId) return;
+    if (!driverTrackingId) return;
     try {
-      const data = await getDriverTracking(driverId);
+      const data = await getDriverTracking(driverTrackingId);
       const address = await reverseGeocode(
         data.currentLocation.coordinates[1],
         data.currentLocation.coordinates[0]
@@ -78,7 +78,7 @@ const TrackingPage = () => {
     } catch (error) {
       console.error("Failed to fetch driver tracking", error);
     }
-  }, [driverId]);
+  }, [driverTrackingId]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -87,8 +87,8 @@ const TrackingPage = () => {
           <Map route={route} currentLocation={currentLocation} />
         )}
         <DriverTracking
-          driverId={driverId}
-          setDriverId={setDriverId}
+          driverId={driverTrackingId}
+          setDriverId={setdriverTrackingId}
           driverData={driverData}
           onTrackDriver={handleTrackDriver}
         />

@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { MdPerson, MdSecurity, MdPalette } from "react-icons/md";
 import { UpdatePassword, UpdateMe } from "../api/authService";
 import { UpdatePasswordPayload, PreferencesPayload } from "../types/auth";
+import { getImageUrl } from "../utils/getImageUrl";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -28,7 +29,7 @@ const SettingsPage = () => {
   });
 
   const [profilePictureUrl, setProfilePictureUrl] = useState(
-    user.profilePicture ? `http://localhost:3000${user.profilePicture}` : null
+    user.profilePicture ? getImageUrl(user.profilePicture) : null
   );
 
   const [passwordData, setPasswordData] = useState<UpdatePasswordPayload>({
@@ -43,45 +44,44 @@ const SettingsPage = () => {
     twoFactor: true,
   });
 
-  const handleProfileSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const response = await UpdateMe({
-        firstName: profileData.firstName,
-        lastName: profileData.lastName,
-        email: profileData.email,
-        profilePicture:
-          profileData.profilePicture instanceof File
-            ? profileData.profilePicture
-            : undefined,
-      });
+ const handleProfileSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  try {
+    const payload = {
+      firstName: profileData.firstName,
+      lastName: profileData.lastName,
+      email: profileData.email,
+      profilePicture: profileData.profilePicture, 
+    };
 
-      const updatedUser = {
-        ...user,
-        ...response.data.user,
-      };
-      localStorage.setItem("user", JSON.stringify(updatedUser));
+    const response = await UpdateMe(payload);
 
-      toast.success("Profile updated successfully!");
+    const updatedUser = {
+      ...user,
+      ...response.user, 
+    };
+    localStorage.setItem("user", JSON.stringify(updatedUser));
 
-      setProfileData({
-        firstName: response.data.user.firstName || "",
-        lastName: response.data.user.lastName || "",
-        email: response.data.user.email || "",
-        profilePicture: null,
-      });
-      setProfilePictureUrl(
-        response.data.user.profilePicture
-          ? `http://localhost:3000${response.data.user.profilePicture}`
-          : null
-      );
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Profile update failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+    toast.success("Profile updated successfully!");
+
+    setProfileData({
+      firstName: response.user.firstName || "",
+      lastName: response.user.lastName || "",
+      email: response.user.email || "",
+      profilePicture: null,
+    });
+    setProfilePictureUrl(
+      response.user.profilePicture
+        ? getImageUrl(response.user.profilePicture)
+        : null
+    );
+  } catch (err: any) {
+    toast.error(err?.response?.data?.message || "Profile update failed");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleProfilePictureChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -165,12 +165,14 @@ const SettingsPage = () => {
                     </label>
                     <div className="mt-1 flex items-center">
                       <img
-                        // src={profilePictureUrl ?? undefined}
-                        src="images\avatar.png"
+                        src={profilePictureUrl ?? "images/avatar.png"}
                         alt="Profile"
                         className="h-16 w-16 rounded-lg object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src =
+                            "/placeholder.svg";
+                        }}
                       />
-                      {/* <img src="http://localhost:3000/uploads/profilePicture-1752572086873-387200476.png" alt="" /> */}
 
                       <label className="ml-4 px-4 py-2 border border-[#22c55e] text-[#22c55e] rounded-lg hover:bg-[#22c55e] hover:text-white cursor-pointer">
                         Change
@@ -178,7 +180,7 @@ const SettingsPage = () => {
                           type="file"
                           accept="image/*"
                           className="hidden"
-                        //   onChange={handleProfilePictureChange}
+                          onChange={handleProfilePictureChange}
                         />
                       </label>
                     </div>

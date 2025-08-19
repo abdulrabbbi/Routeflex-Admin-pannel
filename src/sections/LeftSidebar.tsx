@@ -6,6 +6,9 @@ import {
   MdPayment,
   MdSettings,
   MdLogout,
+  MdGroup,
+  MdRateReview,
+  MdStarRate, 
 } from "react-icons/md";
 import { IoClose } from "react-icons/io5";
 import { Link, useLocation } from "react-router-dom";
@@ -16,11 +19,14 @@ const menuItems = [
   { icon: MdPeople, label: "Driver Tracking", path: "/tracking" },
   { icon: MdLocalShipping, label: "Parcel Tracking", path: "/parcel-tracking" },
   { icon: MdMap, label: "Route Listing", path: "/route-listing" },
+  { icon: MdGroup, label: "User Types", path: "/user-types" },
+  { icon: MdRateReview, label: "Feedbacks", path: "/feedbacks" },
+  { icon: MdStarRate, label: "Ratings", path: "/ratings" },
   { icon: MdPayment, label: "Payments", path: "/payments" },
 ];
 
 const LeftSidebar = ({ isOpen, setIsOpen }: any) => {
-  const location = useLocation(); // Get current path
+  const location = useLocation();
 
   return (
     <>

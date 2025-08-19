@@ -8,7 +8,7 @@ export interface ProfilePayload {
   lastName?: string;
   email?: string;
   profilePicture?: File | null;
-}
+} 
 
 export interface UpdatePasswordPayload {
   currentPassword: string;

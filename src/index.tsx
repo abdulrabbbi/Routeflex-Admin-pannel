@@ -23,7 +23,14 @@ root.render(
       <App />
     </div>
     <Toaster />
-    <ToastContainer />
+    <ToastContainer
+      position="top-right"
+      newestOnTop
+      closeOnClick
+      pauseOnFocusLoss={false}
+      draggable
+      theme="light"
+    />
     {/* </QueryClientProvider> */}
     {/* </ErrorBoundary> */}
   </React.StrictMode>

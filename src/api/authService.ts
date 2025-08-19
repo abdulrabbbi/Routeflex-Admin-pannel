@@ -4,7 +4,7 @@ import { AuthRoutePayload, UpdatePasswordPayload, ProfilePayload } from "../type
 export const Login = async (payload: AuthRoutePayload) => {
   try {
     const response = await apiClient.post("/auth/login", payload);
-    return response.data;
+    return response;
   } catch (error) {
     throw error;
   }

@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { MdLocalShipping, MdDirections } from "react-icons/md";
-import JobAssignmentPage from "../components/JobAssignmentPage";
 import RouteStatsChart from "../components/RouteStatsChart";
 import { FiInbox } from "react-icons/fi";
 import {
@@ -619,8 +618,6 @@ const DashboardContent: React.FC = () => {
         </>
       )}
 
-      {/* Keep these components intact */}
-      <JobAssignmentPage />
     </div>
   );
 };

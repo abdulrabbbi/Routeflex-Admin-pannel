@@ -2,7 +2,7 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 
 
 const apiClient: AxiosInstance = axios.create({
-  baseURL: 'http://localhost:5000/api/v1', 
+  baseURL: 'https://api.routeflex.co.uk/api/v1', 
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

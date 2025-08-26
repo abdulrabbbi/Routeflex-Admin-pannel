@@ -3,7 +3,6 @@ import ProtectedRoute from "../middlewares/ProtectedRoute";
 import DashboardLayout from "../layouts/SiteLayout";
 import DashboardContent from "../pages/MainDashboard";
 import TrackingPage from "../pages/TrackingPage";
-import RouteListing from "../pages/RouteListing";
 import PaymentsPage from "../pages/PaymentPage";
 import ParcelTrackingPage from "../pages/ParcelTrackingPage";
 import LoginPage from "../pages/Auth/Login";
@@ -13,6 +12,9 @@ import UserTypesPage from "../pages/UserTypesPage";
 import FeedbackAdminPage from "../pages/FeedbackAdminPage";
 import RatingsAdminPage from "../pages/RatingsAdminPage";
 import RatingDetailsPage from "../pages/RatingDetailsPage";
+import OrdersPage from "../pages/OrdersPage";
+import OrderDetail from "../components/orders/OrderDetail";
+import JobAssignmentPage from "../components/orders/JobAssignmentPage";
 
 const ErrorFallback = () => (
   <div className="min-h-screen grid place-items-center p-6">
@@ -45,7 +47,9 @@ const Router = () =>
             { path: "tracking", element: <TrackingPage /> },
             { path: "tracking/driver/:id", element: <DriverDetailsPage /> },
             { path: "parcel-tracking", element: <ParcelTrackingPage /> },
-            { path: "route-listing", element: <RouteListing /> },
+            { path: "orders", element: <OrdersPage /> },
+            { path: "orders/:id", element: <OrderDetail /> },
+            { path: "orders/assign", element: <JobAssignmentPage /> },
             { path: "user-types", element: <UserTypesPage /> },
             { path: "feedbacks", element: <FeedbackAdminPage /> },
             { path: "ratings", element: <RatingsAdminPage /> },

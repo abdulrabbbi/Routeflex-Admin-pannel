@@ -1,15 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
-import apiClient from "../api/api";
-import { Button } from "../components/ui/Button";
+import apiClient from "../../api/api"; // ← path as in your project
+import { Button } from "../../components/ui/Button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "../components/ui/Dialog";
+} from "../../components/ui/Dialog";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { getImageUrl } from "../utils/getImageUrl";
+import { getImageUrl } from "../../utils/getImageUrl";
 import {
   FiPackage,
   FiMapPin,
@@ -19,6 +19,7 @@ import {
   FiPhone,
   FiX,
 } from "react-icons/fi";
+import { EmptyStateRow } from "../../components/ui/shared/EmptyStateRow";
 
 type Job = {
   _id: string;
@@ -66,36 +67,6 @@ type DriversResponse = {
   totalPages: number;
   data: { drivers: Driver[] };
 };
-
-const EmptyStateRow: React.FC<{
-  colSpan: number;
-  title: string;
-  hint?: string;
-}> = ({ colSpan, title, hint }) => (
-  <tr>
-    <td colSpan={colSpan} className="px-6 py-16">
-      <div className="flex flex-col items-center justify-center text-center">
-        <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 mb-3">
-          <svg
-            className="h-6 w-6 text-gray-400"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-          >
-            <path
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M3 7h18M3 12h18M3 17h18"
-            />
-          </svg>
-        </span>
-        <p className="font-medium text-gray-700">{title}</p>
-        {hint && <p className="text-sm text-gray-500 mt-1">{hint}</p>}
-      </div>
-    </td>
-  </tr>
-);
 
 const TablePager: React.FC<{
   page: number;
@@ -200,9 +171,15 @@ const JobAssignmentPage: React.FC = () => {
   const loadJobs = async (page = jobsPage, limit = jobsLimit) => {
     setJobsLoading(true);
     try {
-      const res = await apiClient.get<JobsResponse>(
-        `/jobs/admin/jobs/available?page=${page}&limit=${limit}`
-      );
+      // Only jobs that are assignable: available + approved
+      const res = await apiClient.get<JobsResponse>("/jobs/admin/jobs/available", {
+        params: {
+          page,
+          limit,
+          status: "available",
+          approvalStatus: "approved",
+        },
+      });
       setJobs(res.data?.data?.jobs || []);
       setJobsPage(res.data?.page || page);
       setJobsTotalPages(res.data?.totalPages || 1);

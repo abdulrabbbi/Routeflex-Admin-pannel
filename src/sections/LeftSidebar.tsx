@@ -2,13 +2,13 @@ import {
   MdDashboard,
   MdPeople,
   MdLocalShipping,
-  MdMap,
+  MdAssignment,
   MdPayment,
   MdSettings,
   MdLogout,
   MdGroup,
   MdRateReview,
-  MdStarRate, 
+  MdStarRate,
 } from "react-icons/md";
 import { IoClose } from "react-icons/io5";
 import { Link, useLocation } from "react-router-dom";
@@ -18,7 +18,8 @@ const menuItems = [
   { icon: MdDashboard, label: "Dashboard", path: "/" },
   { icon: MdPeople, label: "Driver Tracking", path: "/tracking" },
   { icon: MdLocalShipping, label: "Parcel Tracking", path: "/parcel-tracking" },
-  { icon: MdMap, label: "Route Listing", path: "/route-listing" },
+  { icon: MdAssignment, label: "Order Management", path: "/orders" },
+  // { icon: MdMap, label: "Route Listing", path: "/route-listing" },
   { icon: MdGroup, label: "User Types", path: "/user-types" },
   { icon: MdRateReview, label: "Feedbacks", path: "/feedbacks" },
   { icon: MdStarRate, label: "Ratings", path: "/ratings" },

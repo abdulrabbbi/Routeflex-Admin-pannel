@@ -13,8 +13,7 @@ type FormState = {
 
 const initialState: FormState = { email: "", password: "", remember: false };
 
-const isValidEmail = (v: string) =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -31,16 +30,13 @@ const LoginPage = () => {
     [loading, formData.email, formData.password]
   );
 
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, type, checked, value } = e.target;
-      setFormData((prev) => ({
-        ...prev,
-        [name]: type === "checkbox" ? checked : value,
-      }));
-    },
-    []
-  );
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, type, checked, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  }, []);
 
   const extractErrorMessage = (err: unknown) => {
     // Works with Axios errors or generic errors
@@ -72,6 +68,8 @@ const LoginPage = () => {
       if (!token || !user) {
         throw new Error("Malformed login response");
       }
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
 
       const storage = formData.remember ? localStorage : sessionStorage;
       storage.setItem("token", token);

@@ -5,12 +5,14 @@ export type FeedbackType = "bug" | "feature" | "service" | "payment" | "delivery
 export type UserRef =
   | string
   | {
-      _id: string;
-      email?: string;
-      role?: string;
+      _id?: string;
       name?: string;
       firstName?: string;
       lastName?: string;
+      email?: string;
+      phone?: string;
+      // keep it open for extra fields your API may return
+      [key: string]: any;
     };
 
 export interface FeedbackMeta {

@@ -1,12 +1,21 @@
 import React from "react";
-import { FiRefreshCcw, FiSearch } from "react-icons/fi";
+import { FiRefreshCcw, FiSearch  } from "react-icons/fi";
 import RatingsTable from "../components/ratings/RatingsTables";
 import { useRatings } from "../hooks/useRatings";
 
 const RatingsAdminPage: React.FC = () => {
   const {
-    data, loading, error, refresh,
-    q, setQ, minScore, setMinScore, maxScore, setMaxScore, sort, setSort,
+    data,           
+    loading,
+    error,
+    refresh,
+    q, setQ,
+    minScore, setMinScore,
+    maxScore, setMaxScore,
+    sort, setSort,
+
+    page, setPage,
+    totalPages,
   } = useRatings({ page: 1, limit: 10, sort: "-createdAt" });
 
   return (
@@ -77,7 +86,15 @@ const RatingsAdminPage: React.FC = () => {
         )}
 
         <div className="mt-5">
-          <RatingsTable items={data || []} loading={loading} onRefresh={refresh} />
+          <RatingsTable
+            items={data || []}
+            loading={loading}
+            onRefresh={refresh}
+            page={page}
+            totalPages={totalPages}
+            onPrev={() => setPage((p: number) => Math.max(1, p - 1))}
+            onNext={() => setPage((p: number) => Math.min(totalPages || 1, p + 1))}
+          />
         </div>
       </div>
     </div>

@@ -1,4 +1,3 @@
-// components/ratings/RatingsTable.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -11,6 +10,8 @@ import {
 import { toast } from "react-toastify";
 import apiClient from "../../api/api";
 import { type RatingRow } from "../../api/rating";
+import { TableSkeleton } from "../../components/ui/shared/Skeleton";
+import TablePager from "../../components/ui/shared/TablePager";
 
 /* ----------------------------- helpers / atoms ----------------------------- */
 
@@ -68,7 +69,6 @@ const ResponseDrawer: React.FC<ResponseDrawerProps> = ({
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    // reset textarea each time drawer opens
     if (open) setText("");
   }, [open]);
 
@@ -106,9 +106,7 @@ const ResponseDrawer: React.FC<ResponseDrawerProps> = ({
 
   return (
     <div className="fixed inset-0 z-[9999]">
-      {/* overlay */}
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      {/* panel */}
       <div className="absolute right-0 top-0 h-full w-full sm:w-[480px] bg-white shadow-2xl border-l border-gray-200 flex flex-col">
         <div className="p-4 border-b flex items-center justify-between">
           <h3 className="text-base font-semibold text-gray-900">{title}</h3>
@@ -183,19 +181,30 @@ type RatingsTableProps = {
   items?: RatingRow[];
   loading?: boolean;
   onRefresh?: () => void | Promise<void>;
+
+  // pagination (hook up to your /ratings?page=&limit=)
+  page: number;
+  totalPages: number;
+  onPrev: () => void;
+  onNext: () => void;
 };
+
+const MIN_ROWS = 10;
 
 export default function RatingsTable({
   items = [],
-  loading,
+  loading = false,
   onRefresh,
+  page,
+  totalPages,
+  onPrev,
+  onNext,
 }: RatingsTableProps) {
   const [openFor, setOpenFor] = useState<RatingRow | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
-  // close any open menu on outside click
   useEffect(() => {
     function onDoc(e: MouseEvent) {
       if (!tableRef.current) return;
@@ -235,149 +244,166 @@ export default function RatingsTable({
     "Actions",
   ];
 
+  const fillerCount = !loading && items.length > 0 ? Math.max(MIN_ROWS - items.length, 0) : 0;
+
   return (
-    <div ref={tableRef} className="overflow-x-auto">
-      <table className="min-w-[1000px] w-full">
-        <thead>
-          <tr className="bg-[#f0fdf4]">
-            {headers.map((h) => (
-              <th
-                key={h}
-                className="px-6 py-3 text-left text-sm font-medium text-[#22c55e] uppercase"
-              >
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-
-        {/* Loading skeleton */}
-        {loading ? (
-          <tbody>
-            {Array.from({ length: 6 }).map((_, r) => (
-              <tr key={r} className="border-b">
-                {Array.from({ length: headers.length }).map((__, c) => (
-                  <td key={c} className="px-6 py-4">
-                    <div className="h-4 w-32 bg-gray-100 animate-pulse rounded" />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        ) : items.length === 0 ? (
-          <tbody>
-            <tr>
-              <td
-                colSpan={headers.length}
-                className="py-10 text-center text-gray-500"
-              >
-                No ratings found.
-              </td>
+    <div className="space-y-3">
+      
+      <div ref={tableRef} className="overflow-x-auto">
+        <table className="min-w-[1000px] w-full">
+          <thead>
+            <tr className="bg-[#f0fdf4]">
+              {headers.map((h) => (
+                <th
+                  key={h}
+                  className="px-6 py-3 text-left text-sm font-medium text-[#22c55e] uppercase"
+                >
+                  {h}
+                </th>
+              ))}
             </tr>
-          </tbody>
-        ) : (
-          <tbody className="divide-y divide-gray-100">
-            {items.map((r) => {
-              const idShort = r._id?.slice(-6)?.toUpperCase() || "-";
-              const created = fmtDate(r.createdAt);
-              const from =
-                typeof r.fromUser === "string"
-                  ? r.fromUser
-                  : r.fromUser?.email || (r.fromUser as any)?._id || "-";
-              const to =
-                typeof r.toUser === "string"
-                  ? r.toUser
-                  : r.toUser?.email || (r.toUser as any)?._id || "-";
-              const deliveryId = r.delivery?._id || "-";
-              const deliveryStatus = r.delivery?.status || "-";
-              const comment = r.commentsPreview || (r as any).comments || "-";
-              const menuOpen = menuOpenId === r._id;
+          </thead>
 
-              return (
-                <tr key={r._id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm text-[#1e1e38] font-mono">
-                    {idShort}
-                  </td>
-                  <td className="px-6 py-4 text-sm">
-                    <StarRow score={r.score} />
-                  </td>
-                  <td className="px-6 py-4 text-sm text-[#1e1e38]">
-                    <div className="line-clamp-2 max-w-[380px]">{comment}</div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-[#1e1e38]">
-                    <div className="line-clamp-1 break-all">{from}</div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-[#1e1e38]">
-                    <div className="line-clamp-1 break-all">{to}</div>
-                  </td>
-                  <td className="px-6 py-4 text-sm font-mono">{deliveryId}</td>
-                  <td className="px-6 py-4 text-sm text-[#1e1e38]">
-                    {deliveryStatus}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {created}
-                  </td>
+          {loading ? (
+            <tbody>
+              <TableSkeleton columns={headers.length} rows={MIN_ROWS} />
+            </tbody>
+          ) : items.length === 0 ? (
+            <tbody>
+              <tr>
+                <td
+                  colSpan={headers.length}
+                  className="py-10 text-center text-gray-500"
+                >
+                  No ratings found.
+                </td>
+              </tr>
+            </tbody>
+          ) : (
+            <tbody className="divide-y divide-gray-100">
+              {items.map((r) => {
+                const idShort = r._id?.slice(-6)?.toUpperCase() || "-";
+                const created = fmtDate(r.createdAt);
+                const from =
+                  typeof r.fromUser === "string"
+                    ? r.fromUser
+                    : r.fromUser?.email || (r.fromUser as any)?._id || "-";
+                const to =
+                  typeof r.toUser === "string"
+                    ? r.toUser
+                    : r.toUser?.email || (r.toUser as any)?._id || "-";
+                const deliveryId = r.delivery?._id || "-";
+                const deliveryStatus = r.delivery?.status || "-";
+                const comment = r.commentsPreview || (r as any).comments || "-";
+                const menuOpen = menuOpenId === r._id;
 
-                  {/* Actions with 3-dots menu */}
-                  <td className="px-6 py-4 text-sm relative">
-                    <button
-                      onClick={() =>
-                        setMenuOpenId(menuOpen ? null : (r._id as string))
-                      }
-                      className="inline-flex items-center rounded-md border px-2 py-1.5 hover:bg-gray-50"
-                      aria-haspopup="menu"
-                      aria-expanded={menuOpen}
-                      aria-label="More actions"
-                    >
-                      <FiMoreVertical />
-                    </button>
+                return (
+                  <tr key={r._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm text-[#1e1e38] font-mono">
+                      {idShort}
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      <StarRow score={r.score} />
+                    </td>
+                    <td className="px-6 py-4 text-sm text-[#1e1e38]">
+                      <div className="line-clamp-2 max-w-[380px]">{comment}</div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-[#1e1e38]">
+                      <div className="line-clamp-1 break-all">{from}</div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-[#1e1e38]">
+                      <div className="line-clamp-1 break-all">{to}</div>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-mono">{deliveryId}</td>
+                    <td className="px-6 py-4 text-sm text-[#1e1e38]">
+                      {deliveryStatus}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {created}
+                    </td>
 
-                    {menuOpen && (
-                      <div
-                        role="menu"
-                        className="absolute right-6 mt-2 w-44 rounded-lg border bg-white shadow-lg ring-1 ring-black/5 z-10"
+                    <td className="px-6 py-4 text-sm relative">
+                      <button
+                        onClick={() =>
+                          setMenuOpenId(menuOpen ? null : (r._id as string))
+                        }
+                        className="inline-flex items-center rounded-md border px-2 py-1.5 hover:bg-gray-50"
+                        aria-haspopup="menu"
+                        aria-expanded={menuOpen}
+                        aria-label="More actions"
                       >
-                        <Link
-                          to={`/ratings/${r._id}`}
-                          onClick={() => setMenuOpenId(null)}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-                          role="menuitem"
+                        <FiMoreVertical />
+                      </button>
+
+                      {menuOpen && (
+                        <div
+                          role="menu"
+                          className="absolute right-6 mt-2 w-44 rounded-lg border bg-white shadow-lg ring-1 ring-black/5 z-10"
                         >
-                          <FiEye /> View
-                        </Link>
-                        <button
-                          onClick={() => {
-                            setMenuOpenId(null);
-                            setOpenFor(r);
-                          }}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-                          role="menuitem"
-                        >
-                          <FiMessageSquare /> Respond
-                        </button>
-                        <button
-                          onClick={() => handleDelete(r._id)}
-                          disabled={deletingId === r._id}
-                          className={clsx(
-                            "w-full text-left px-3 py-2 text-sm flex items-center gap-2",
-                            deletingId === r._id
-                              ? "text-gray-400 cursor-not-allowed"
-                              : "text-red-600 hover:bg-red-50"
-                          )}
-                          role="menuitem"
-                        >
-                          <FiTrash2 />
-                          {deletingId === r._id ? "Deleting…" : "Delete"}
-                        </button>
-                      </div>
-                    )}
-                  </td>
+                          <Link
+                            to={`/ratings/${r._id}`}
+                            onClick={() => setMenuOpenId(null)}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                            role="menuitem"
+                          >
+                            <FiEye /> View
+                          </Link>
+                          <button
+                            onClick={() => {
+                              setMenuOpenId(null);
+                              setOpenFor(r);
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                            role="menuitem"
+                          >
+                            <FiMessageSquare /> Respond
+                          </button>
+                          <button
+                            onClick={() => handleDelete(r._id)}
+                            disabled={deletingId === r._id}
+                            className={clsx(
+                              "w-full text-left px-3 py-2 text-sm flex items-center gap-2",
+                              deletingId === r._id
+                                ? "text-gray-400 cursor-not-allowed"
+                                : "text-red-600 hover:bg-red-50"
+                            )}
+                            role="menuitem"
+                          >
+                            <FiTrash2 />
+                            {deletingId === r._id ? "Deleting…" : "Delete"}
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {/* filler rows to keep min height */}
+              {Array.from({ length: fillerCount }).map((_, i) => (
+                <tr key={`filler-${i}`} className="border-b">
+                  {headers.map((_, c) => (
+                    <td key={c} className="px-6 py-4 h-10 text-sm text-transparent">
+                      —
+                    </td>
+                  ))}
                 </tr>
-              );
-            })}
-          </tbody>
-        )}
-      </table>
+              ))}
+            </tbody>
+          )}
+        </table>
+      </div>
+
+      {/* Footer pager (optional but nice) */}
+      <div className="flex justify-end">
+        <TablePager
+          page={page}
+          totalPages={totalPages}
+          onPrev={onPrev}
+          onNext={onNext}
+          disabled={loading}
+        />
+      </div>
 
       {/* Respond drawer */}
       <ResponseDrawer

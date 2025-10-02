@@ -63,35 +63,4 @@ export const RatingStars: React.FC<{ value?: number }> = ({ value }) => {
   );
 };
 
-/** Simple pager */
-export const Pager: React.FC<{
-  page: number;
-  totalPages: number;
-  onPrev: () => void;
-  onNext: () => void;
-  disabled?: boolean;
-}> = ({ page, totalPages, onPrev, onNext, disabled }) => {
-  const canPrev = page > 1;
-  const canNext = page < totalPages;
-  return (
-    <div className="inline-flex items-center gap-2">
-      <button
-        onClick={onPrev}
-        disabled={!canPrev || disabled}
-        className="px-3 py-1.5 rounded-lg border text-sm disabled:opacity-50 hover:bg-gray-50"
-      >
-        ← Prev
-      </button>
-      <span className="text-sm text-gray-600">
-        Page {page} / {Math.max(totalPages, 1)}
-      </span>
-      <button
-        onClick={onNext}
-        disabled={!canNext || disabled}
-        className="px-3 py-1.5 rounded-lg border text-sm disabled:opacity-50 hover:bg-gray-50"
-      >
-        Next →
-      </button>
-    </div>
-  );
-};
+

@@ -2,7 +2,8 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 
 
 const apiClient: AxiosInstance = axios.create({
-  baseURL: 'https://api.routeflex.co.uk/api/v1', 
+  // baseURL: 'https://api.routeflex.co.uk/api/v1', 
+  baseURL: 'http://localhost:5000/api/v1', 
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -11,9 +12,15 @@ const apiClient: AxiosInstance = axios.create({
 
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    // Read token from either localStorage or sessionStorage
+    // to stay consistent with guards that support both.
+    const token =
+      (typeof window !== 'undefined' && localStorage.getItem('token')) ||
+      (typeof window !== 'undefined' && sessionStorage.getItem('token')) ||
+      null;
+
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      (config.headers as any).Authorization = `Bearer ${token}`;
     }
     return config;
   },

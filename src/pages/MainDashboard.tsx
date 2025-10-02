@@ -1,7 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { MdLocalShipping, MdDirections } from "react-icons/md";
 import RouteStatsChart from "../components/RouteStatsChart";
-import { FiInbox } from "react-icons/fi";
+import DeliveredTable, {
+  DeliveredRow,
+  DeliveredMeta,
+} from "../components/reports/DeliveredTable";
+import InProgressTable, {
+  InProgressRow,
+  InProgressMeta,
+} from "../components/reports/InProgressTable";
+import { SkeletonStatCard } from "../components/ui/shared/Skeleton";
+
 import {
   getParcelReports,
   RangeType,
@@ -56,40 +65,6 @@ function parseLateEarly(s: string) {
   return { isLate, isEarly, days, hours, mins };
 }
 
-function formatMinutes(v: string | number): string {
-  if (typeof v === "number") {
-    const abs = Math.abs(v);
-    const isLate = v > 0;
-    const days = Math.floor(abs / 1440);
-    const hours = Math.floor((abs % 1440) / 60);
-    const mins = abs % 60;
-    const parts: string[] = [];
-    if (days) parts.push(`${days}d`);
-    if (hours) parts.push(`${hours}h`);
-    parts.push(`${mins}m`);
-    return `${parts.join(" ")} ${isLate ? "late" : "early"}`;
-  }
-  const info = parseLateEarly(v);
-  const parts: string[] = [];
-  if (info.days) parts.push(`${info.days}d`);
-  if (info.hours) parts.push(`${info.hours}h`);
-  if (info.mins || parts.length === 0) parts.push(`${info.mins}m`);
-  return `${parts.join(" ")} ${
-    info.isLate ? "late" : info.isEarly ? "early" : ""
-  }`.trim();
-}
-
-function getTimeLeftClass(v: string | number): string {
-  if (typeof v === "string") {
-    const lower = v.toLowerCase();
-    if (lower.includes("late")) return "text-red-600";
-    if (lower.includes("early")) return "text-green-600";
-    if (lower.includes("completed")) return "text-emerald-600";
-    return "text-gray-600";
-  }
-  return Number(v) > 0 ? "text-red-600" : "text-green-600";
-}
-
 /* ---------- Small UI bits ---------- */
 const Segmented: React.FC<{
   value: RangeType;
@@ -114,35 +89,6 @@ const Segmented: React.FC<{
     </div>
   );
 };
-
-const TablePager: React.FC<{
-  page: number;
-  totalPages: number;
-  onPrev: () => void;
-  onNext: () => void;
-  disabled?: boolean;
-}> = ({ page, totalPages, onPrev, onNext, disabled }) => (
-  <div className="flex items-center gap-3">
-    <button
-      onClick={onPrev}
-      disabled={disabled || page <= 1}
-      className="px-4 py-2 rounded-lg border text-sm font-medium disabled:opacity-50 hover:bg-gray-50"
-    >
-      ← Previous
-    </button>
-    <span className="text-sm text-gray-600">
-      Page <strong>{Math.max(page, 1)}</strong> of{" "}
-      <strong>{Math.max(totalPages || 1, 1)}</strong>
-    </span>
-    <button
-      onClick={onNext}
-      disabled={disabled || page >= (totalPages || 1)}
-      className="px-4 py-2 rounded-lg border text-sm font-medium disabled:opacity-50 hover:bg-gray-50"
-    >
-      Next →
-    </button>
-  </div>
-);
 
 /* ---------- Main Component ---------- */
 const DashboardContent: React.FC = () => {
@@ -313,15 +259,21 @@ const DashboardContent: React.FC = () => {
         <Segmented value={range} onChange={setRange} />
       </div>
 
-      {/* Loading & Error */}
-      {loading ? (
-        <div className="text-gray-600">Loading dashboard...</div>
-      ) : err ? (
-        <div className="text-red-500">{err}</div>
-      ) : (
-        <>
-          {/* Stats */}
-          <div className="grid gap-6 md:grid-cols-2">
+      {err && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 text-red-700 px-4 py-3">
+          {err}
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {loading ? (
+          <>
+            <SkeletonStatCard />
+            <SkeletonStatCard />
+          </>
+        ) : (
+          <>
             <div className="bg-white p-6 rounded-2xl shadow-sm ring-1 ring-gray-100">
               <div className="flex justify-between items-center">
                 <div>
@@ -356,268 +308,27 @@ const DashboardContent: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </>
+        )}
+      </div>
 
-          {/* Delivered Table */}
-          <section>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <h2 className="text-lg font-semibold">Orders Delivered</h2>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-600">Rows:</label>
-                  <select
-                    value={deliveredMeta.limit}
-                    onChange={(e) => onDeliveredLimit(Number(e.target.value))}
-                    className="border rounded-lg px-2 py-1 text-sm"
-                  >
-                    {[10, 20, 50].map((n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <TablePager
-                  page={deliveredMeta.page}
-                  totalPages={deliveredMeta.totalPages}
-                  onPrev={onDeliveredPrev}
-                  onNext={onDeliveredNext}
-                  disabled={loading}
-                />
-              </div>
-            </div>
+      <DeliveredTable
+        rows={delivered as DeliveredRow[]}
+        meta={deliveredMeta as DeliveredMeta}
+        loading={loading}
+        onLimitChange={onDeliveredLimit}
+        onPrev={onDeliveredPrev}
+        onNext={onDeliveredNext}
+      />
 
-            <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead>
-                    <tr className="bg-[#f0fdf4]">
-                      {[
-                        "OR#",
-                        "Driver",
-                        "Pickup at",
-                        "Delivered at",
-                        "Time left",
-                        "Hours",
-                        "Status",
-                      ].map((h) => (
-                        <th
-                          key={h}
-                          className="px-6 py-3 text-left text-xs font-semibold text-[#22c55e] uppercase"
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-
-                  <tbody className="divide-y divide-gray-100">
-                    {loading ? (
-                      <tr>
-                        <td
-                          colSpan={7}
-                          className="px-6 py-12 text-center text-gray-500"
-                        >
-                          Loading…
-                        </td>
-                      </tr>
-                    ) : delivered.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-16">
-                          <div className="flex flex-col items-center justify-center text-center">
-                            <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 mb-3">
-                              <FiInbox className="h-6 w-6 text-gray-400" />
-                            </span>
-                            <p className="font-medium text-gray-700">
-                              No deliveries completed in this range
-                            </p>
-                            <p className="text-sm text-gray-500 mt-1">
-                              Try a different range or check back later.
-                            </p>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      delivered.map((d, i) => (
-                        <tr
-                          key={`${d.sequence}-${i}`}
-                          className="hover:bg-gray-50"
-                        >
-                          <td className="px-6 py-4 text-sm text-[#1e1e38]">
-                            {d.sequence}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-[#1e1e38]">
-                            {d.driver}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-[#1e1e38]">
-                            {d.pickupAt}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-[#1e1e38]">
-                            {d.deliveredAt}
-                          </td>
-                          <td
-                            className={`px-6 py-4 text-sm ${getTimeLeftClass(
-                              d.timeLeft
-                            )}`}
-                          >
-                            {typeof d.timeLeft === "string"
-                              ? formatMinutes(d.timeLeft)
-                              : d.timeLeft}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-[#1e1e38]">
-                            {d.hours}
-                          </td>
-                          <td className="px-6 py-4 text-sm">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#f0fdf4] text-[#16a34a]">
-                              {d.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* footer summary */}
-              <div className="px-4 py-3 flex items-center justify-between text-xs text-gray-500">
-                <span>
-                  Showing <strong>{delivered.length}</strong> of{" "}
-                  <strong>{deliveredMeta.total}</strong> delivered
-                </span>
-              </div>
-            </div>
-          </section>
-
-          {/* In-Progress Table */}
-          <section>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <h2 className="text-lg font-semibold">Orders in Process</h2>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-600">Rows:</label>
-                  <select
-                    value={inProgressMeta.limit}
-                    onChange={(e) => onInProgressLimit(Number(e.target.value))}
-                    className="border rounded-lg px-2 py-1 text-sm"
-                  >
-                    {[10, 20, 50].map((n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <TablePager
-                  page={inProgressMeta.page}
-                  totalPages={inProgressMeta.totalPages}
-                  onPrev={onInProgressPrev}
-                  onNext={onInProgressNext}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead>
-                    <tr className="bg-[#f0fdf4]">
-                      {[
-                        "No#",
-                        "Driver",
-                        "Pickup at",
-                        "Dropoff Location",
-                        "Time Left",
-                      ].map((h) => (
-                        <th
-                          key={h}
-                          className="px-6 py-3 text-left text-xs font-semibold text-[#22c55e] uppercase"
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-
-                  <tbody className="divide-y divide-gray-100">
-                    {loading ? (
-                      <tr>
-                        <td
-                          colSpan={5}
-                          className="px-6 py-12 text-center text-gray-500"
-                        >
-                          Loading…
-                        </td>
-                      </tr>
-                    ) : inProgress.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-6 py-16">
-                          <div className="flex flex-col items-center justify-center text-center">
-                            <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 mb-3">
-                              <FiInbox className="h-6 w-6 text-gray-400" />
-                            </span>
-                            <p className="font-medium text-gray-700">
-                              No orders in progress for this range
-                            </p>
-                            <p className="text-sm text-gray-500 mt-1">
-                              Try switching the range or check back later.
-                            </p>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      inProgress.map((d, i) => (
-                        <tr
-                          key={`${d.sequence}-${i}`}
-                          className="hover:bg-gray-50"
-                        >
-                          <td className="px-6 py-4 text-sm text-[#1e1e38]">
-                            {d.sequence}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-[#1e1e38]">
-                            {d.driver}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-[#1e1e38]">
-                            {d.pickupAt}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-[#1e1e38]">
-                            <div className="space-y-1">
-                              {d.dropoffLocation?.split("|").map((loc, idx) => (
-                                <div key={idx} className="text-gray-700">
-                                  • {loc.trim()}
-                                </div>
-                              ))}
-                            </div>
-                          </td>
-                          <td
-                            className={`px-6 py-4 text-sm ${getTimeLeftClass(
-                              d.timeLeft
-                            )}`}
-                          >
-                            {typeof d.timeLeft === "string"
-                              ? formatMinutes(d.timeLeft)
-                              : d.timeLeft}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* footer summary */}
-              <div className="px-4 py-3 flex items-center justify-between text-xs text-gray-500">
-                <span>
-                  Showing <strong>{inProgress.length}</strong> of{" "}
-                  <strong>{inProgressMeta.total}</strong> in-progress
-                </span>
-              </div>
-            </div>
-          </section>
-        </>
-      )}
-
+      <InProgressTable
+        rows={inProgress as InProgressRow[]}
+        meta={inProgressMeta as InProgressMeta}
+        loading={loading}
+        onLimitChange={onInProgressLimit}
+        onPrev={onInProgressPrev}
+        onNext={onInProgressNext}
+      />
     </div>
   );
 };

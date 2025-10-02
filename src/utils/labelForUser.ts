@@ -5,5 +5,5 @@ export function labelForUser(u?: UserRef): string {
   if (typeof u === "string") return u;
   const { name, firstName, lastName, email, _id } = u;
   const full = name || [firstName, lastName].filter(Boolean).join(" ").trim();
-  return full || email || _id;
+  return full || email || _id || "—";
 }

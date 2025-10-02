@@ -39,7 +39,7 @@ export const getParcelReports = async (params: GetParcelReportsParams = {}) => {
 };
 
 
-export type Role = "individual" | "business" | "driver";
+export type Role = "individual" | "business" ;
 
 export interface BaseUser {
   _id?: string;

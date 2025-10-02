@@ -6,34 +6,80 @@ import { toast } from "react-hot-toast";
 import { getImageUrl } from "../utils/getImageUrl";
 import { getDrivers } from "../api/deliveryService";
 
+/* =========================
+   Types
+   ========================= */
 interface Driver {
   _id: string;
   firstName: string;
   lastName: string;
-  rating: number;
-  isVerified: boolean;
-  createdAt: string;
-  profilePicture: string;
-  // optional fields if your API sends them:
-  id?: string;
+  rating?: number;
+  isVerified?: boolean;
+  createdAt?: string;
+  profilePicture?: string;
+  email?: string;
+  phone?: string;
 }
 
 interface DriversApiResponse {
-  status?: string;
-  results?: number;
   page: number;
   totalPages: number;
-  data: {
-    users: Driver[];
-  };
+  data: { users: Driver[] };
+  status?: string;
+  results?: number;
 }
 
+/* =========================
+   Local Skeleton Components
+   ========================= */
+const Skeleton: React.FC<{ height?: number; className?: string }> = ({
+  height = 14,
+  className = "",
+}) => (
+  <div
+    className={`animate-pulse rounded bg-gray-200 ${className}`}
+    style={{ height }}
+  />
+);
+
+const TableSkeleton: React.FC<{
+  columns: number;
+  rows?: number;
+  cellHeight?: number;
+  cellClassName?: string;
+}> = ({ columns, rows = 5, cellHeight = 16, cellClassName = "px-4 py-3" }) => (
+  <>
+    {Array.from({ length: rows }).map((_, r) => (
+      <tr key={`sk-row-${r}`} className="animate-pulse">
+        {Array.from({ length: columns }).map((__, c) => (
+          <td key={`sk-cell-${r}-${c}`} className={cellClassName}>
+            <Skeleton height={cellHeight} className="w-full" />
+          </td>
+        ))}
+      </tr>
+    ))}
+  </>
+);
+
+/* =========================
+   Constants / Utils
+   ========================= */
 const PLACEHOLDER_AVATAR =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
-    `<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'><circle cx='40' cy='40' r='40' fill='#e5e7eb'/></svg>`
+    `<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'>
+      <rect width='80' height='80' rx='40' fill='#e5e7eb'/>
+    </svg>`
   );
 
+const formatDate = (iso?: string) =>
+  iso ? new Date(iso).toLocaleDateString() : "-";
+
+const clamp = (n: number, min = 0, max = 5) => Math.max(min, Math.min(max, n));
+
+/* =========================
+   Component
+   ========================= */
 const DriversTable: React.FC = React.memo(() => {
   const navigate = useNavigate();
 
@@ -45,46 +91,51 @@ const DriversTable: React.FC = React.memo(() => {
   const [err, setErr] = useState<string>("");
 
   const fetchDrivers = useCallback(
-    async (pg: number = 1, lm: number = limit) => {
+    async (pg: number, lm: number, signal?: AbortSignal) => {
+      setIsLoading(true);
+      setErr("");
       try {
-        setIsLoading(true);
-        setErr("");
         const res: DriversApiResponse = await getDrivers(lm, pg);
         setDrivers(res?.data?.users ?? []);
         setTotalPages(Number(res?.totalPages ?? 1));
         setPage(res?.page ?? pg);
-      } catch (error) {
+      } catch (e: any) {
+        if (e?.name === "CanceledError" || e?.name === "AbortError") return;
         setDrivers([]);
         setTotalPages(1);
         setErr("Failed to fetch drivers");
-        toast.error("Failed to fetch drivers");
+        toast.error(e?.response?.data?.message || "Failed to fetch drivers");
       } finally {
         setIsLoading(false);
       }
     },
-    [limit]
+    []
   );
 
+  // Load on mount + whenever page/limit changes
   useEffect(() => {
-    fetchDrivers(1, limit);
-  }, [fetchDrivers, limit]);
+    const ctrl = new AbortController();
+    fetchDrivers(page, limit, ctrl.signal);
+    return () => ctrl.abort();
+  }, [fetchDrivers, page, limit]);
 
-  const onPrev = () => page > 1 && fetchDrivers(page - 1);
-  const onNext = () => page < totalPages && fetchDrivers(page + 1);
+  const onPrev = useCallback(() => {
+    setPage((p) => Math.max(1, p - 1));
+  }, []);
+  const onNext = useCallback(() => {
+    setPage((p) => Math.min(totalPages || 1, p + 1));
+  }, [totalPages]);
 
   // CSV export (Excel-friendly)
-  const handleExport = () => {
+  const handleExport = useCallback(() => {
     try {
       const headers = ["Driver ID", "Full Name", "Email", "Phone", "Verified", "Joining Date"];
       const rows = drivers.map((d) => {
         const id = (d._id || "").slice(-6).toUpperCase();
-        const fullName = `${d.firstName ?? ""} ${d.lastName ?? ""}`.trim();
+        const fullName = `${d.firstName ?? ""} ${d.lastName ?? ""}`.trim() || "-";
         const verified = d.isVerified ? "Yes" : "No";
-        const joined = d.createdAt ? new Date(d.createdAt).toLocaleDateString() : "-";
-        // You didn't specify email/phone in Driver interface above; add if your API returns them:
-        const email = (d as any)?.email ?? "-";
-        const phone = (d as any)?.phone ?? "-";
-        return [id, fullName || "-", email, phone, verified, joined];
+        const joined = formatDate(d.createdAt);
+        return [id, fullName, d.email || "-", d.phone || "-", verified, joined];
       });
 
       const csv = [headers, ...rows]
@@ -112,16 +163,17 @@ const DriversTable: React.FC = React.memo(() => {
     } catch {
       toast.error("Export failed");
     }
-  };
+  }, [drivers, page]);
 
   const tableBody = useMemo(() => {
     if (isLoading) {
       return (
-        <tr>
-          <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
-            Loading...
-          </td>
-        </tr>
+        <TableSkeleton
+          columns={7}
+          rows={5}
+          cellHeight={18}
+          cellClassName="px-4 py-4 text-center"
+        />
       );
     }
 
@@ -147,9 +199,12 @@ const DriversTable: React.FC = React.memo(() => {
 
     return drivers.map((driver) => {
       const displayId = driver._id?.slice(-6).toUpperCase() || "-";
-      const fullName = `${driver.firstName ?? ""} ${driver.lastName ?? ""}`.trim() || "-";
-      const created = driver.createdAt ? new Date(driver.createdAt).toLocaleDateString() : "-";
-      const img = getImageUrl(driver.profilePicture) || PLACEHOLDER_AVATAR;
+      const fullName =
+        `${driver.firstName ?? ""} ${driver.lastName ?? ""}`.trim() || "-";
+      const created = formatDate(driver.createdAt);
+      const img = getImageUrl(driver.profilePicture || "") || PLACEHOLDER_AVATAR;
+
+      const stars = clamp(Number(driver.rating || 0));
 
       return (
         <tr key={driver._id} className="hover:bg-gray-50">
@@ -163,12 +218,16 @@ const DriversTable: React.FC = React.memo(() => {
               }}
             />
           </td>
-          <td className="px-4 py-4 text-sm text-center text-[#1e1e38]">{displayId}</td>
-          <td className="px-4 py-4 text-sm text-center text-[#1e1e38]">{fullName}</td>
+          <td className="px-4 py-4 text-sm text-center text-[#1e1e38]">
+            {displayId}
+          </td>
+          <td className="px-4 py-4 text-sm text-center text-[#1e1e38]">
+            {fullName}
+          </td>
           <td className="px-4 py-4 text-sm text-center">
-            {driver.rating ? (
+            {stars > 0 ? (
               <div className="flex justify-center items-center gap-1 text-yellow-400">
-                {Array.from({ length: driver.rating }, (_, i) => (
+                {Array.from({ length: stars }, (_, i) => (
                   <AiFillStar key={i} />
                 ))}
               </div>
@@ -185,7 +244,9 @@ const DriversTable: React.FC = React.memo(() => {
               {driver.isVerified ? "Verified" : "Not Verified"}
             </span>
           </td>
-          <td className="px-4 py-4 text-sm text-center text-[#1e1e38]">{created}</td>
+          <td className="px-4 py-4 text-sm text-center text-[#1e1e38]">
+            {created}
+          </td>
           <td className="px-4 py-4 text-sm relative text-center">
             <button
               onClick={() => navigate(`/tracking/driver/${driver._id}`)}
@@ -202,22 +263,16 @@ const DriversTable: React.FC = React.memo(() => {
 
   return (
     <div className="p-6">
-      {/* Header bar (title + controls) */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <h2 className="text-xl md:text-2xl font-bold text-gray-900">Drivers</h2>
-
         <div className="flex items-center gap-3">
           {/* Rows per page */}
           <div className="flex items-center gap-2">
             <label className="text-sm text-gray-600">Rows:</label>
             <select
               value={limit}
-              onChange={(e) => {
-                const newLimit = Number(e.target.value);
-                setLimit(newLimit);
-                // fetch page 1 with new limit
-                fetchDrivers(1, newLimit);
-              }}
+              onChange={(e) => setLimit(Number(e.target.value))}
               className="border rounded-lg px-2 py-1 text-sm"
             >
               {[10, 20, 50].map((n) => (
@@ -227,7 +282,6 @@ const DriversTable: React.FC = React.memo(() => {
               ))}
             </select>
           </div>
-
           {/* Export */}
           <button
             onClick={handleExport}

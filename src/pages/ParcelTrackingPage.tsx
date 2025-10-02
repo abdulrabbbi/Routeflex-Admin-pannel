@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import ParcelMap from "../components/Maps/ParcelMap";
 import ParcelTracking from "../components/ParcelTracking";
 import { getParcelTracking } from "../api/deliveryService";
-import DeliveriesTable from "../components/DeliveriesTable";
+import DeliveriesTable from "../components/deliveries/DeliveriesTable";
 
 const cars = [
   { lat: 33.5973, lng: 73.0479 },

@@ -340,7 +340,7 @@ const DriverDetailsPage: React.FC = () => {
                   <div>
                     <p className="text-sm text-gray-600">Vehicle</p>
                     <p className="font-medium">
-                      {driver.user.vehicle.make} {driver.user.vehicle.model} (
+                      {driver.user.vehicle.make ? driver.user.vehicle.make : "Unknown"} {driver.user.vehicle.model} (
                       {driver.user.vehicle.year}) - {driver.user.vehicle.color}
                     </p>
                     <p className="text-sm">

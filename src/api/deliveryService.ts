@@ -1,4 +1,9 @@
 import apiClient from "./api";
+import {
+  DeliveriesApiResponse,
+  RangeFilter,
+  TrackOrderResponse,
+} from "../types/deliveries";
 
 export type RangeType = "daily" | "weekly" | "monthly";
 
@@ -131,21 +136,15 @@ export const getDriverTracking = async (driverTrackingId: string) => {
 export const getDeliveries = async (
   limit: number = 10,
   page: number = 1,
-  range: "daily" | "weekly" | "monthly" = "daily"
-) => {
-  try {
-    const response = await apiClient.get(`/deliveries/deliveries`, {
-      params: {
-        limit,
-        page,
-        range,
-      },
-    });
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
+  range: RangeFilter = "daily"
+): Promise<DeliveriesApiResponse> => {
+  const { data } = await apiClient.get<DeliveriesApiResponse>(
+    `/deliveries/deliveries`,
+    { params: { limit, page, range } }
+  );
+  return data;
 };
+
 
 export const deleteDelivery = async (deliveryId: string) => {
   return await apiClient.delete(`/deliveries/${deliveryId}`);
@@ -167,13 +166,11 @@ export const reverseGeocode = async (
   );
 };
 
-export const getParcelTracking = async (orderId: string) => {
-  try {
-    const response = await apiClient.get(`/deliveries/track-order/${orderId}`);
-    return response.data.data;
-  } catch (error) {
-    throw error;
-  }
+export const getTrackOrder = async (deliveryId: string) => {
+  const { data } = await apiClient.get<TrackOrderResponse>(
+    `/deliveries/track-order/${deliveryId}`
+  );
+  return data.data;
 };
 
 export const getNotifications = async (

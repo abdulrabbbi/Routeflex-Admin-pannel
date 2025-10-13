@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import MapLeaflet from "../components/Maps/TrackingMap";
 import GoogleTrackingMap from "../components/Maps/GoogleTrackingMap";
 import DriverTracking from "../components/DriverTracking";
-import DriversTable from "../components/DriversTable";
+import DriversTable from "../components/drivers/DriversTable";
 import { getDriverTracking, reverseGeocode } from "../api/deliveryService";
 import { useSocket } from "../realtime/SocketProvider";
 

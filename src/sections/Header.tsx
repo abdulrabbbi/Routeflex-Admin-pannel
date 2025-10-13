@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { MdMenu, MdSearch, MdLightMode, MdNotifications } from "react-icons/md";
 import { Images } from "../assets/images";
 import { useLocation } from "react-router-dom";
 import { getImageUrl } from "../utils/getImageUrl";
+import { getSignedUrl, s3UrlToKey } from "../utils/s3";
 
 type User = {
   profilePicture?: string;
@@ -35,10 +36,51 @@ const Header = ({ onMenuClick, onNotificationClick }: any) => {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  // build a safe image src every render
-  const profileSrc = useMemo(() => {
-    const url = getImageUrl(user?.profilePicture);
-    return url || Images.Avatar; // fallback if util returns undefined
+  // Build a safe image src, wait for DB/signed URL, and show a skeleton until loaded
+  const [profileSrc, setProfileSrc] = useState<string | null>(null);
+  const [resolving, setResolving] = useState<boolean>(false);
+  const [imgLoaded, setImgLoaded] = useState<boolean>(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const v = user?.profilePicture || "";
+
+    const compute = async () => {
+      setResolving(true);
+      setImgLoaded(false);
+      try {
+        if (!v) {
+          // no server image → show default immediately (no waiting needed)
+          if (!cancelled) {
+            setProfileSrc(Images.Avatar);
+            setImgLoaded(true);
+          }
+          return;
+        }
+        const isHttp = /^https?:/i.test(v);
+        const isS3Http = isHttp && /amazonaws\.com/.test(v);
+        const isKeyLikely = !isHttp && !v.startsWith("/");
+        if (isS3Http || isKeyLikely) {
+          const signed = await getSignedUrl(s3UrlToKey(v), 300);
+          if (!cancelled) setProfileSrc(signed || Images.Avatar);
+        } else {
+          const url = getImageUrl(v);
+          if (!cancelled) setProfileSrc(url || Images.Avatar);
+        }
+      } catch {
+        if (!cancelled) {
+          setProfileSrc(Images.Avatar);
+          setImgLoaded(true);
+        }
+      } finally {
+        if (!cancelled) setResolving(false);
+      }
+    };
+    void compute();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user?.profilePicture]);
 
   // map path -> label
@@ -96,15 +138,29 @@ const Header = ({ onMenuClick, onNotificationClick }: any) => {
           </button>
 
           {/* Profile */}
-          <img
-            src={profileSrc}
-            alt="Profile"
-            className="h-8 w-8 rounded-full object-cover"
-            onError={(e) => {
-              // final fallback if the URL 404s
-              e.currentTarget.src = Images.Avatar;
-            }}
-          />
+          <div className="relative h-8 w-8">
+            {(resolving || !imgLoaded) && (
+              <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse" />
+            )}
+            {profileSrc && (
+              <img
+                key={profileSrc}
+                src={profileSrc}
+                alt="Profile"
+                className={`h-8 w-8 rounded-full object-cover ${
+                  resolving || !imgLoaded ? "hidden" : "block"
+                }`}
+                onLoad={() => setImgLoaded(true)}
+                onError={(e) => {
+                  // final fallback if the URL 404s
+                  e.currentTarget.src = Images.Avatar;
+                  setImgLoaded(true);
+                }}
+                loading="lazy"
+                decoding="async"
+              />
+            )}
+          </div>
         </div>
       </div>
     </header>

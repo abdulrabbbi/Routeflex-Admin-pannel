@@ -1,18 +1,19 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MdPerson, MdSecurity, MdPalette } from "react-icons/md";
 import { UpdatePassword, UpdateMe } from "../api/authService";
 import { UpdatePasswordPayload, PreferencesPayload } from "../types/auth";
 import { getImageUrl } from "../utils/getImageUrl";
-import { toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { getSignedUrl, s3UrlToKey } from "../utils/s3";
+import { Images } from "../assets/images";
+import { toast } from "react-hot-toast";
 
 interface ProfileData {
   firstName: string;
   lastName: string;
   email: string;
-  profilePicture: File | string | null;
+  profilePicture: File | null;
 }
 
 const SettingsPage = () => {
@@ -28,9 +29,49 @@ const SettingsPage = () => {
     profilePicture: null as File | null,
   });
 
-  const [profilePictureUrl, setProfilePictureUrl] = useState(
-    user.profilePicture ? getImageUrl(user.profilePicture) : null
+  // Unified avatar handling (S3 keys/URLs, API-relative, file preview)
+  const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
+
+  const resolveAvatar = useMemo(
+    () =>
+      async (value?: string | null) => {
+        try {
+          if (!value) {
+            setAvatarSrc(null);
+            return;
+          }
+          const v = String(value);
+          const isHttp = /^https?:/i.test(v);
+          const isS3Http = isHttp && /amazonaws\.com/.test(v);
+          const isKeyLikely = !isHttp && !v.startsWith("/");
+          if (isS3Http || isKeyLikely) {
+            const signed = await getSignedUrl(s3UrlToKey(v), 300);
+            setAvatarSrc(signed || null);
+            return;
+          }
+          setAvatarSrc(getImageUrl(v) || null);
+        } catch {
+          setAvatarSrc(null);
+        }
+      },
+    []
   );
+
+  useEffect(() => {
+    void resolveAvatar(user?.profilePicture);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.profilePicture]);
+
+  // Cleanup preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+    };
+  }, []);
 
   const [passwordData, setPasswordData] = useState<UpdatePasswordPayload>({
     currentPassword: "",
@@ -52,30 +93,37 @@ const SettingsPage = () => {
       firstName: profileData.firstName,
       lastName: profileData.lastName,
       email: profileData.email,
-      profilePicture: profileData.profilePicture, 
+      profilePicture: profileData.profilePicture,
     };
 
     const response = await UpdateMe(payload);
 
+    // Support both { user } and { data: { user } } API shapes
+    const apiUser = (response?.user || response?.data?.user || response?.data?.data?.user || response?.data) as any;
     const updatedUser = {
       ...user,
-      ...response.user, 
+      ...(apiUser || {}),
     };
-    localStorage.setItem("user", JSON.stringify(updatedUser));
+    try {
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+    } catch {}
 
     toast.success("Profile updated successfully!");
 
     setProfileData({
-      firstName: response.user.firstName || "",
-      lastName: response.user.lastName || "",
-      email: response.user.email || "",
+      firstName: updatedUser.firstName || "",
+      lastName: updatedUser.lastName || "",
+      email: updatedUser.email || "",
       profilePicture: null,
     });
-    setProfilePictureUrl(
-      response.user.profilePicture
-        ? getImageUrl(response.user.profilePicture)
-        : null
-    );
+
+    // Cleanup any prior file preview
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+    // Resolve display URL from server value
+    await resolveAvatar(updatedUser?.profilePicture || null);
   } catch (err: any) {
     toast.error(err?.response?.data?.message || "Profile update failed");
   } finally {
@@ -86,14 +134,15 @@ const SettingsPage = () => {
   const handleProfilePictureChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
-    if (e.target.files?.length) {
-      const file = e.target.files[0];
-      setProfileData((prev) => ({
-        ...prev,
-        profilePicture: file,
-      }));
-      setProfilePictureUrl(URL.createObjectURL(file));
-    }
+    if (!e.target.files?.length) return;
+    const file = e.target.files[0];
+    setProfileData((prev) => ({ ...prev, profilePicture: file }));
+
+    // Revoke previous object URL to prevent leaks
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    const url = URL.createObjectURL(file);
+    objectUrlRef.current = url;
+    setAvatarSrc(url);
   };
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
@@ -165,13 +214,14 @@ const SettingsPage = () => {
                     </label>
                     <div className="mt-1 flex items-center">
                       <img
-                        src={profilePictureUrl ?? "images/avatar.png"}
+                        src={avatarSrc || Images.Avatar}
                         alt="Profile"
                         className="h-16 w-16 rounded-lg object-cover"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src =
-                            "/placeholder.svg";
+                          (e.currentTarget as HTMLImageElement).src = Images.Avatar;
                         }}
+                        loading="lazy"
+                        decoding="async"
                       />
 
                       <label className="ml-4 px-4 py-2 border border-[#22c55e] text-[#22c55e] rounded-lg hover:bg-[#22c55e] hover:text-white cursor-pointer">

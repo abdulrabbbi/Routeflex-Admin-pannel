@@ -1,5 +1,4 @@
 "use client";
-
 import React from "react";
 import { RangeFilter } from "../../types/deliveries";
 import { SegmentedToggle } from "./SegmentedToggle";
@@ -14,14 +13,10 @@ export const DeliveriesHeader: React.FC<{
 }> = ({ filter, setFilter, limit, setLimit, onExport, disabled }) => {
   return (
     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-      <h2 className="text-xl md:text-2xl font-bold text-gray-900">Parcels</h2>
+      <h2 className="text-xl md:text-2xl font-bold text-gray-900">Completed Orders </h2>
 
       <div className="flex flex-wrap items-center gap-3">
-        <SegmentedToggle
-          value={filter}
-          onChange={setFilter}
-          disabled={disabled}
-        />
+        <SegmentedToggle value={filter} onChange={setFilter} disabled={disabled} />
 
         <div className="flex items-center gap-2">
           <label className="text-sm text-gray-600">Rows:</label>

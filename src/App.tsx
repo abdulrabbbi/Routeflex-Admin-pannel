@@ -10,15 +10,12 @@ import apiClient from "./api/api";
 // Example .env:
 //   REACT_APP_WS_URL=https://api.routeflex.co.uk
 //   REACT_APP_API_BASE=https://api.routeflex.co.uk
-const WS_BASE =
-  process.env.REACT_APP_WS_URL ||
-  process.env.REACT_APP_API_BASE ||
-  "http://localhost:5000";
-  // "https://api.routeflex.co.uk";
+const WS_BASE = process.env.REACT_APP_WS_URL || "http://localhost:5000";
+// "https://api.routeflex.co.uk";
 
 const App: React.FC = () => {
   const router = Router();
-  const token = useAuthToken("token"); 
+  const token = useAuthToken("token");
 
   // Keep Axios auth header in sync with the current token
   useEffect(() => {

@@ -9,6 +9,7 @@ import {
   MdGroup,
   MdRateReview,
   MdStarRate,
+  MdMap,
 } from "react-icons/md";
 import { IoClose } from "react-icons/io5";
 import { Link, useLocation } from "react-router-dom";
@@ -16,13 +17,12 @@ import { Images } from "../assets/images";
 
 const menuItems = [
   { icon: MdDashboard, label: "Dashboard", path: "/" },
+  { icon: MdAssignment, label: "Orders", path: "/orders" },
+  { icon: MdLocalShipping, label: "Orders History", path: "/parcel-tracking" },
+  { icon: MdGroup, label: "Customers", path: "/user-types" },
+  { icon: MdStarRate, label: "Reviews", path: "/ratings" },
   { icon: MdPeople, label: "Driver Tracking", path: "/tracking" },
-  { icon: MdLocalShipping, label: "Parcel Tracking", path: "/parcel-tracking" },
-  { icon: MdAssignment, label: "Order Management", path: "/orders" },
-  // { icon: MdMap, label: "Route Listing", path: "/route-listing" },
-  { icon: MdGroup, label: "User Types", path: "/user-types" },
-  { icon: MdRateReview, label: "Feedbacks", path: "/feedbacks" },
-  { icon: MdStarRate, label: "Ratings", path: "/ratings" },
+  { icon: MdRateReview, label: "Feedback Inbox", path: "/feedbacks" },
   { icon: MdPayment, label: "Payments", path: "/payments" },
 ];
 

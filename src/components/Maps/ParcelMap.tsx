@@ -1,66 +1,112 @@
-import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
-import { MdSearch, MdAdd, MdRemove } from "react-icons/md";
 import "leaflet/dist/leaflet.css";
-import L from "leaflet";
-import { Images } from "../../assets/images";
+import { useEffect, useMemo } from "react";
+import React from "react";
+import { MapContainer, TileLayer, CircleMarker, Polyline, useMap } from "react-leaflet";
+import type { LatLngExpression } from "leaflet";
+import polyline from "@mapbox/polyline";
 
-// Custom vehicle icon (Black Car)
-const vehicleIcon = new L.Icon({
-  iconUrl: Images.MapCar, // Use a black car image
-  iconSize: [40, 40],
-  iconAnchor: [20, 20],
-});
+type Point = { lat: number; lng: number };
 
-// Zoom Control Component
-const ZoomControl = () => {
-  const map = useMap();
-  return (
-    <div className="absolute right-4 top-4 z-[1000] flex flex-col gap-2">
-      <button onClick={() => map.zoomIn()} className="bg-white p-2 rounded-lg shadow-md hover:bg-gray-50">
-        <MdAdd className="w-5 h-5" />
-      </button>
-      <button onClick={() => map.zoomOut()} className="bg-white p-2 rounded-lg shadow-md hover:bg-gray-50">
-        <MdRemove className="w-5 h-5" />
-      </button>
-    </div>
-  );
+type Props = {
+  cars: Point[];
+  polyline?: LatLngExpression[]; // optional pre-decoded path
+  encodedPolyline?: string; // optional encoded polyline
+  height?: number; // px
+  className?: string;
 };
 
-// Type Definitions
-interface MapProps {
-  cars: { lat: number; lng: number }[];
+function FitTo({ points, path }: { points: Point[]; path: LatLngExpression[] }) {
+  const map = useMap();
+  useEffect(() => {
+    const list: [number, number][] = [];
+    if (points?.length) list.push(...points.map((p) => [p.lat, p.lng] as [number, number]));
+    if (path?.length) {
+      for (const v of path as any[]) {
+        const a = Array.isArray(v) ? v : null;
+        if (a && a.length >= 2) list.push([a[0], a[1]]);
+      }
+    }
+    if (!list.length) return;
+    const run = () => {
+      try {
+        map.fitBounds(list as any, { padding: [24, 24] });
+        // Only invalidate after map pane exists
+        const safeInvalidate = () => {
+          const anyMap = map as any;
+          if (anyMap && anyMap._mapPane) map.invalidateSize();
+        };
+        setTimeout(safeInvalidate, 60);
+      } catch {}
+    };
+    const anyMap = map as any;
+    if (anyMap && anyMap._loaded) run();
+    else anyMap?.whenReady?.(run);
+  }, [map, points, path]);
+  return null;
 }
 
-const Map = ({ cars }: MapProps) => {
-  const center = cars.length > 0 ? [cars[0].lat, cars[0].lng] : [33.5973, 73.0479];
+function InvalidateOnMount() {
+  const map = useMap();
+  useEffect(() => {
+    const safeInvalidate = () => {
+      const anyMap = map as any;
+      if (anyMap && anyMap._mapPane) map.invalidateSize();
+    };
+    const anyMap = map as any;
+    if (anyMap && anyMap._loaded) setTimeout(safeInvalidate, 0);
+    else anyMap?.whenReady?.(() => setTimeout(safeInvalidate, 0));
+  }, [map]);
+  return null;
+}
+
+export default function ParcelMap({ cars, polyline: givenPath, encodedPolyline, height = 280, className = "" }: Props) {
+  const points = cars || [];
+
+  const path = useMemo<LatLngExpression[]>(() => {
+    if (givenPath && givenPath.length) return givenPath;
+    try {
+      if (encodedPolyline && typeof encodedPolyline === "string" && encodedPolyline.length > 0) {
+        return polyline.decode(encodedPolyline).map((p) => [p[0], p[1]] as LatLngExpression);
+      }
+    } catch {}
+    return [];
+  }, [givenPath, encodedPolyline]);
+
+  const center: LatLngExpression = useMemo(() => {
+    if (points.length) return [points[0].lat, points[0].lng] as LatLngExpression;
+    if (path.length) return path[0];
+    return [51.5074, -0.1278];
+  }, [points, path]);
 
   return (
-    <div className="relative rounded-xl overflow-hidden shadow-sm border border-gray-200">
-      {/* Search Bar */}
-      <div className="absolute top-4 left-4 z-[1000] w-72">
-        <div className="relative">
-          <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search by area"
-            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e] focus:border-transparent"
-          />
-        </div>
-      </div>
-
-      {/* Map */}
-      <MapContainer center={center as [number, number]} zoom={15} className="h-[500px] w-full" zoomControl={false}>
+    <div className={className} style={{ height }}>
+      <MapContainer
+        center={center}
+        zoom={12}
+        scrollWheelZoom={false}
+        style={{ height: "100%", width: "100%", borderRadius: 12, overflow: "hidden" }}
+      >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" // Light theme
+          attribution='&copy; OpenStreetMap contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {cars.map((car, index) => (
-          <Marker key={index} position={[car.lat, car.lng]} icon={vehicleIcon} />
+
+        {path.length > 1 && (
+          <Polyline positions={path} pathOptions={{ color: "#3b82f6", weight: 4, opacity: 0.7 }} />
+        )}
+
+        {points.map((p, i) => (
+          <CircleMarker
+            key={`${p.lat},${p.lng},${i}`}
+            center={[p.lat, p.lng] as LatLngExpression}
+            radius={6}
+            pathOptions={{ color: "#3b82f6", fillColor: "#3b82f6", fillOpacity: 1, weight: 0 }}
+          />
         ))}
-        <ZoomControl />
+
+        <FitTo points={points} path={path} />
+        <InvalidateOnMount />
       </MapContainer>
     </div>
   );
-};
-
-export default Map;
+}

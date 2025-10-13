@@ -3,10 +3,12 @@
 import { IoClose } from "react-icons/io5";
 import { MdSend, MdAccessTime, MdDone, MdDoneAll } from "react-icons/md";
 import { useEffect, useRef, useState, useCallback } from "react";
-import apiClient from "../api/api";
-import { getImageUrl } from "../utils/getImageUrl";
-import { useChatThread } from "../realtime/useChatThread";
-import { useSocket } from "../realtime/SocketProvider";
+import apiClient from "../../api/api";
+import { getImageUrl } from "../../utils/getImageUrl";
+import { getSignedUrl, s3UrlToKey } from "../../utils/s3";
+import AvatarCell from ".././drivers/AvatarCell";
+import { useChatThread } from "../../realtime/useChatThread";
+import { useSocket } from "../../realtime/SocketProvider";
 
 type ChatProps = {
   contact: { id: string; name: string; avatar?: string };
@@ -33,6 +35,7 @@ function asId(v: any): string {
 const Chat = ({ contact, onClose }: ChatProps) => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Msg[]>([]);
+  const [resolvedAvatar, setResolvedAvatar] = useState<string | undefined>(undefined);
   const meId = typeof window !== "undefined" ? (localStorage.getItem("userId") || "") : "";
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -73,6 +76,37 @@ const Chat = ({ contact, onClose }: ChatProps) => {
     };
 
     if (contact?.id) fetchMessages();
+    return () => {
+      cancelled = true;
+    };
+  }, [contact]);
+
+  // Resolve avatar: sign S3 key/URL, else build absolute, else fallback to initials
+  useEffect(() => {
+    let cancelled = false;
+    const v = contact?.avatar || "";
+    if (!v || v === "/placeholder.svg") {
+      setResolvedAvatar(undefined);
+      return;
+    }
+    const isHttp = /^https?:/i.test(v);
+    const isS3Http = isHttp && /amazonaws\.com/.test(v);
+    const isKeyLikely = !isHttp && !v.startsWith("/");
+    if (isS3Http || isKeyLikely) {
+      (async () => {
+        try {
+          const signed = await getSignedUrl(s3UrlToKey(v), 300);
+          if (!cancelled) setResolvedAvatar(signed);
+        } catch {
+          if (!cancelled) setResolvedAvatar(undefined);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }
+    // regular http or API-relative path
+    setResolvedAvatar(getImageUrl(v));
     return () => {
       cancelled = true;
     };
@@ -244,11 +278,7 @@ const Chat = ({ contact, onClose }: ChatProps) => {
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-3">
-          <img
-            src={getImageUrl(contact.avatar || "/placeholder.svg")}
-            alt={contact.name}
-            className="h-10 w-10 rounded-full"
-          />
+          <AvatarCell fullName={contact.name} src={resolvedAvatar} size={40} />
           <div>
             <h3 className="font-medium text-[#1e1e38]">{contact.name}</h3>
             <p className="text-sm text-gray-500">

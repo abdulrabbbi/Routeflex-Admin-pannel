@@ -1,46 +1,39 @@
-import { Delivery, RangeFilter } from "../../types/deliveries";
+import { DeliveryRowApi, RangeFilter } from "../../types/deliveries";
 
-export function exportDeliveriesCsv(opts: {
-  deliveries: Delivery[];
+export function exportDeliveriesCsv({
+  deliveries,
+  filter,
+  page,
+}: {
+  deliveries: DeliveryRowApi[];
   filter: RangeFilter;
   page: number;
 }) {
-  const { deliveries, filter, page } = opts;
-
   const headers = [
     "Parcel ID",
     "Driver ID",
     "Driver Name",
+    "Status",
+    "Payment",
+    "Distance (km)",
+    "Package",
     "Pickup Address",
     "Delivery Address",
-    "Distance (km)",
-    "Package Category",
-    "Delivery Status",
-    "Payment Status",
   ];
-
   const rows = deliveries.map((d) => [
-    d.deliveryId || "-",
-    (d.driverId || "").slice(-6).toUpperCase(),
-    d.driverFullName || "-",
-    d.pickupAddress || "-",
-    d.deliveryAddress || "-",
-    typeof d.distance === "number" ? d.distance.toFixed(2) : "-",
-    d.packageCategory || "-",
-    d.deliveryStatus || "-",
-    d.paymentStatus || "-",
+    String(d.parcelId).slice(-6).toUpperCase(),
+    d.driverId ?? "",
+    d.driverName,
+    d.status,
+    d.payment,
+    typeof d.distance === "number" ? d.distance.toFixed(1) : "",
+    d.package,
+    d.pickupAddress ?? "",
+    d.deliveryAddress ?? "",
   ]);
 
   const csv = [headers, ...rows]
-    .map((r) =>
-      r
-        .map((cell) => {
-          const s = String(cell ?? "");
-          const escaped = s.replace(/"/g, '""');
-          return /[",\n]/.test(escaped) ? `"${escaped}"` : escaped;
-        })
-        .join(",")
-    )
+    .map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","))
     .join("\n");
 
   const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });

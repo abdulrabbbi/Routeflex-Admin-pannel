@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaEye } from "react-icons/fa";
 import { AiFillStar } from "react-icons/ai";
 import { toast } from "react-hot-toast";
-import { getImageUrl } from "../utils/getImageUrl";
-import { getDrivers } from "../api/deliveryService";
 
-/* =========================
-   Types
-   ========================= */
+import { getDrivers } from "../../api/deliveryService";
+import TablePager from "../../components/ui/shared/TablePager";
+import AvatarCell from "./AvatarCell";
+import { getImageUrl } from "../../utils/getImageUrl";
+import { getSignedUrl, s3UrlToKey } from "../../utils/s3";
+
+/* =============== Types =============== */
 interface Driver {
   _id: string;
   firstName: string;
@@ -16,11 +18,10 @@ interface Driver {
   rating?: number;
   isVerified?: boolean;
   createdAt?: string;
-  profilePicture?: string;
+  profilePicture?: string | null;
   email?: string;
   phone?: string;
 }
-
 interface DriversApiResponse {
   page: number;
   totalPages: number;
@@ -29,57 +30,27 @@ interface DriversApiResponse {
   results?: number;
 }
 
-/* =========================
-   Local Skeleton Components
-   ========================= */
-const Skeleton: React.FC<{ height?: number; className?: string }> = ({
-  height = 14,
-  className = "",
-}) => (
-  <div
-    className={`animate-pulse rounded bg-gray-200 ${className}`}
-    style={{ height }}
-  />
-);
-
-const TableSkeleton: React.FC<{
-  columns: number;
-  rows?: number;
-  cellHeight?: number;
-  cellClassName?: string;
-}> = ({ columns, rows = 5, cellHeight = 16, cellClassName = "px-4 py-3" }) => (
-  <>
-    {Array.from({ length: rows }).map((_, r) => (
-      <tr key={`sk-row-${r}`} className="animate-pulse">
-        {Array.from({ length: columns }).map((__, c) => (
-          <td key={`sk-cell-${r}-${c}`} className={cellClassName}>
-            <Skeleton height={cellHeight} className="w-full" />
-          </td>
-        ))}
-      </tr>
-    ))}
-  </>
-);
-
-/* =========================
-   Constants / Utils
-   ========================= */
-const PLACEHOLDER_AVATAR =
-  "data:image/svg+xml;utf8," +
-  encodeURIComponent(
-    `<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'>
-      <rect width='80' height='80' rx='40' fill='#e5e7eb'/>
-    </svg>`
-  );
-
+/* =============== Small helpers =============== */
 const formatDate = (iso?: string) =>
-  iso ? new Date(iso).toLocaleDateString() : "-";
+  iso ? new Date(iso).toLocaleDateString("en-GB") : "-";
 
 const clamp = (n: number, min = 0, max = 5) => Math.max(min, Math.min(max, n));
 
-/* =========================
-   Component
-   ========================= */
+// Cache signed avatar URLs within the session
+const avatarSignedCache = new Map<string, string>();
+
+/* =============== Skeletons =============== */
+const SkeletonRow: React.FC = () => (
+  <tr className="animate-pulse">
+    {Array.from({ length: 7 }).map((_, i) => (
+      <td key={i} className="px-4 py-4">
+        <div className="h-4 rounded bg-gray-200 w-full" />
+      </td>
+    ))}
+  </tr>
+);
+
+/* =============== Component =============== */
 const DriversTable: React.FC = React.memo(() => {
   const navigate = useNavigate();
 
@@ -89,12 +60,14 @@ const DriversTable: React.FC = React.memo(() => {
   const [totalPages, setTotalPages] = useState<number>(1);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [err, setErr] = useState<string>("");
+  const [signedMap, setSignedMap] = useState<Record<string, string>>({});
 
   const fetchDrivers = useCallback(
     async (pg: number, lm: number, signal?: AbortSignal) => {
       setIsLoading(true);
       setErr("");
       try {
+        // your API already paginates: getDrivers(limit, page)
         const res: DriversApiResponse = await getDrivers(lm, pg);
         setDrivers(res?.data?.users ?? []);
         setTotalPages(Number(res?.totalPages ?? 1));
@@ -112,12 +85,61 @@ const DriversTable: React.FC = React.memo(() => {
     []
   );
 
-  // Load on mount + whenever page/limit changes
   useEffect(() => {
     const ctrl = new AbortController();
     fetchDrivers(page, limit, ctrl.signal);
     return () => ctrl.abort();
   }, [fetchDrivers, page, limit]);
+
+  // Resolve signed URLs when needed: S3 HTTP URLs or raw keys (not API-relative)
+  useEffect(() => {
+    let aborted = false;
+    const values = Array.from(
+      new Set(
+        (drivers || [])
+          .map((d) => d.profilePicture)
+          .filter((v): v is string => typeof v === "string" && v.length > 0)
+      )
+    );
+
+    const needsSigning = (v: string) => {
+      const isHttp = /^https?:/i.test(v);
+      const isS3Http = isHttp && /amazonaws\.com/.test(v);
+      const isKeyLikely = !isHttp && !v.startsWith("/");
+      return isS3Http || isKeyLikely;
+    };
+
+    const work = values
+      .filter((v) => needsSigning(v))
+      .map(async (v) => {
+        const key = s3UrlToKey(v);
+        const cached = avatarSignedCache.get(key);
+        if (cached) {
+          return { original: v, url: cached } as const;
+        }
+        try {
+          const url = await getSignedUrl(key, 300);
+          if (aborted) return null;
+          avatarSignedCache.set(key, url);
+          return { original: v, url } as const;
+        } catch {
+          return null;
+        }
+      });
+
+    Promise.all(work).then((pairs) => {
+      if (aborted) return;
+      const next: Record<string, string> = {};
+      for (const p of pairs) {
+        if (p && p.url) next[p.original] = p.url;
+      }
+      if (Object.keys(next).length) setSignedMap((prev) => ({ ...prev, ...next }));
+    });
+
+    return () => {
+      aborted = true;
+    };
+  }, [drivers]);
 
   const onPrev = useCallback(() => {
     setPage((p) => Math.max(1, p - 1));
@@ -126,13 +148,20 @@ const DriversTable: React.FC = React.memo(() => {
     setPage((p) => Math.min(totalPages || 1, p + 1));
   }, [totalPages]);
 
-  // CSV export (Excel-friendly)
   const handleExport = useCallback(() => {
     try {
-      const headers = ["Driver ID", "Full Name", "Email", "Phone", "Verified", "Joining Date"];
+      const headers = [
+        "Driver ID",
+        "Full Name",
+        "Email",
+        "Phone",
+        "Verified",
+        "Joining Date",
+      ];
       const rows = drivers.map((d) => {
         const id = (d._id || "").slice(-6).toUpperCase();
-        const fullName = `${d.firstName ?? ""} ${d.lastName ?? ""}`.trim() || "-";
+        const fullName =
+          `${d.firstName ?? ""} ${d.lastName ?? ""}`.trim() || "-";
         const verified = d.isVerified ? "Yes" : "No";
         const joined = formatDate(d.createdAt);
         return [id, fullName, d.email || "-", d.phone || "-", verified, joined];
@@ -150,7 +179,9 @@ const DriversTable: React.FC = React.memo(() => {
         )
         .join("\n");
 
-      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+      const blob = new Blob(["\uFEFF" + csv], {
+        type: "text/csv;charset=utf-8;",
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
@@ -165,15 +196,14 @@ const DriversTable: React.FC = React.memo(() => {
     }
   }, [drivers, page]);
 
-  const tableBody = useMemo(() => {
+  const rows = useMemo(() => {
     if (isLoading) {
       return (
-        <TableSkeleton
-          columns={7}
-          rows={5}
-          cellHeight={18}
-          cellClassName="px-4 py-4 text-center"
-        />
+        <>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonRow key={i} />
+          ))}
+        </>
       );
     }
 
@@ -197,33 +227,55 @@ const DriversTable: React.FC = React.memo(() => {
       );
     }
 
-    return drivers.map((driver) => {
-      const displayId = driver._id?.slice(-6).toUpperCase() || "-";
-      const fullName =
-        `${driver.firstName ?? ""} ${driver.lastName ?? ""}`.trim() || "-";
-      const created = formatDate(driver.createdAt);
-      const img = getImageUrl(driver.profilePicture || "") || PLACEHOLDER_AVATAR;
-
-      const stars = clamp(Number(driver.rating || 0));
+    return drivers.map((d) => {
+      const displayId = d._id?.slice(-6).toUpperCase() || "-";
+      const fullName = `${d.firstName ?? ""} ${d.lastName ?? ""}`.trim() || "-";
+      const created = formatDate(d.createdAt);
+      const imgSrc = (() => {
+        const value = d.profilePicture || "";
+        if (!value) return undefined;
+        const signed = signedMap[value];
+        if (signed) return signed;
+        const isHttp = /^https?:/i.test(value);
+        const isS3Http = isHttp && /amazonaws\.com/.test(value);
+        if (isS3Http) {
+          // wait for signed URL; avoid initial broken load
+          return undefined;
+        }
+        if (!isHttp && !value.startsWith("/")) {
+          // raw key; wait for signing
+          return undefined;
+        }
+        // API-relative path or other http(s)
+        return getImageUrl(value);
+      })();
+      const stars = clamp(Number(d.rating || 0));
 
       return (
-        <tr key={driver._id} className="hover:bg-gray-50">
-          <td className="px-4 py-4 whitespace-nowrap text-center">
-            <img
-              src={img}
-              alt={fullName}
-              className="w-10 h-10 rounded-full object-cover inline-block bg-gray-200"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src = PLACEHOLDER_AVATAR;
-              }}
-            />
+        <tr key={d._id} className="hover:bg-gray-50">
+          {/* Avatar / Name cell */}
+          <td className="px-4 py-4 text-center whitespace-nowrap">
+            <div className="flex items-center justify-center gap-3">
+              <AvatarCell fullName={fullName} src={imgSrc} size={40} />
+              {/* Show full name next to avatar on md+ for better usability */}
+              <span className="hidden md:inline text-sm text-[#1e1e38]">
+                {fullName}
+              </span>
+            </div>
           </td>
+
           <td className="px-4 py-4 text-sm text-center text-[#1e1e38]">
             {displayId}
           </td>
-          <td className="px-4 py-4 text-sm text-center text-[#1e1e38]">
+
+          {/* On small screens we still need the name column visible */}
+          <td className="px-4 py-4 text-sm text-center text-[#1e1e38] md:hidden">
             {fullName}
           </td>
+          <td className="px-4 py-4 text-sm text-center text-[#1e1e38] hidden md:table-cell">
+            {fullName}
+          </td>
+
           <td className="px-4 py-4 text-sm text-center">
             {stars > 0 ? (
               <div className="flex justify-center items-center gap-1 text-yellow-400">
@@ -235,23 +287,28 @@ const DriversTable: React.FC = React.memo(() => {
               <span className="text-gray-400 italic">Not rated yet</span>
             )}
           </td>
+
           <td className="px-4 py-4 text-sm text-center">
             <span
               className={`px-3 py-1 rounded-full text-xs font-medium ${
-                driver.isVerified ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                d.isVerified
+                  ? "bg-green-100 text-green-700"
+                  : "bg-red-100 text-red-700"
               }`}
             >
-              {driver.isVerified ? "Verified" : "Not Verified"}
+              {d.isVerified ? "Verified" : "Not Verified"}
             </span>
           </td>
+
           <td className="px-4 py-4 text-sm text-center text-[#1e1e38]">
             {created}
           </td>
-          <td className="px-4 py-4 text-sm relative text-center">
+
+          <td className="px-4 py-4 text-sm text-center">
             <button
-              onClick={() => navigate(`/tracking/driver/${driver._id}`)}
+              onClick={() => navigate(`/tracking/driver/${d._id}`)}
               className="p-2 rounded-lg hover:bg-gray-100"
-              aria-label="View driver"
+              aria-label="View driver details"
             >
               <FaEye className="text-[#22c55e] w-5 h-5" />
             </button>
@@ -259,13 +316,14 @@ const DriversTable: React.FC = React.memo(() => {
         </tr>
       );
     });
-  }, [isLoading, err, drivers, navigate]);
+  }, [drivers, err, isLoading, navigate]);
 
   return (
     <div className="p-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <h2 className="text-xl md:text-2xl font-bold text-gray-900">Drivers</h2>
+
         <div className="flex items-center gap-3">
           {/* Rows per page */}
           <div className="flex items-center gap-2">
@@ -282,6 +340,7 @@ const DriversTable: React.FC = React.memo(() => {
               ))}
             </select>
           </div>
+
           {/* Export */}
           <button
             onClick={handleExport}
@@ -298,42 +357,43 @@ const DriversTable: React.FC = React.memo(() => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead>
               <tr className="bg-[#f0fdf4]">
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">Profile</th>
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">Driver ID</th>
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">Full Name</th>
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">Rating</th>
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">Is Verified</th>
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">Created At</th>
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">Actions</th>
+                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">
+                  Profile
+                </th>
+                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">
+                  Driver ID
+                </th>
+                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">
+                  Full Name
+                </th>
+                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">
+                  Rating
+                </th>
+                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">
+                  Verified
+                </th>
+                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">
+                  Created At
+                </th>
+                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">
+                  Actions
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">{tableBody}</tbody>
+            <tbody className="divide-y divide-gray-200">{rows}</tbody>
           </table>
         </div>
 
-        {/* Footer: pagination + summary */}
+        {/* Footer */}
         <div className="px-4 py-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center justify-between gap-3">
-              <button
-                disabled={page <= 1 || isLoading}
-                onClick={onPrev}
-                className="px-4 py-2 rounded-lg border text-sm font-medium disabled:opacity-50 hover:bg-gray-50"
-              >
-                ← Previous
-              </button>
-              <span className="text-sm text-gray-600">
-                Page <strong>{page}</strong> of <strong>{Math.max(totalPages, 1)}</strong>
-              </span>
-              <button
-                disabled={page >= totalPages || isLoading}
-                onClick={onNext}
-                className="px-4 py-2 rounded-lg border text-sm font-medium disabled:opacity-50 hover:bg-gray-50"
-              >
-                Next →
-              </button>
-            </div>
-
+            <TablePager
+              page={page}
+              totalPages={totalPages}
+              onPrev={onPrev}
+              onNext={onNext}
+              disabled={isLoading}
+            />
             <div className="text-xs text-gray-500">
               Showing <strong>{drivers.length}</strong> item(s)
               {limit ? ` • Limit ${limit}` : ""}

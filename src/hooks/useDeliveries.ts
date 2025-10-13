@@ -1,16 +1,15 @@
 "use client";
-
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { getDeliveries, deleteDelivery } from "../api/deliveryService";
 import {
-  Delivery,
+  DeliveryRowApi,
   DeliveriesApiResponse,
   RangeFilter,
 } from "../types/deliveries";
 
 export function useDeliveries() {
-  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [deliveries, setDeliveries] = useState<DeliveryRowApi[]>([]);
   const [filter, setFilter] = useState<RangeFilter>("daily");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -22,38 +21,28 @@ export function useDeliveries() {
     isLoading && page === 1 && deliveries.length === 0 && !err;
 
   const fetchDeliveries = useCallback(
-    async (
-      pageNum: number = 1,
-      selectedFilter: RangeFilter = filter,
-      lm: number = limit
-    ) => {
+    async (pageNum: number = 1, selectedFilter: RangeFilter = filter, lm: number = limit) => {
       try {
         setIsLoading(true);
         setErr("");
-        const res: DeliveriesApiResponse = await getDeliveries(
-          lm,
-          pageNum,
-          selectedFilter
-        );
-
+        const res: DeliveriesApiResponse = await getDeliveries(lm, pageNum, selectedFilter);
         const items = res?.data?.deliveries ?? [];
         setDeliveries(items);
 
-        const reportedTotalPages =
-          res?.totalPages ??
-          res?.data?.totalPages ??
-          (typeof res?.total === "number"
-            ? Math.max(1, Math.ceil(res.total / lm))
-            : typeof res?.data?.total === "number"
-            ? Math.max(1, Math.ceil((res.data.total as number) / lm))
-            : 1);
+        const total = typeof res?.total === "number" ? res.total : 0;
+        const totalPages =
+          typeof res?.totalPages === "number"
+            ? res.totalPages
+            : total > 0
+            ? Math.max(1, Math.ceil(total / lm))
+            : 1;
 
-        setTotalPages(reportedTotalPages);
+        setTotalPages(totalPages);
         setPage(res?.page ?? pageNum);
-      } catch {
+      } catch (e: any) {
         setDeliveries([]);
         setTotalPages(1);
-        setErr("Failed to fetch deliveries");
+        setErr(e?.response?.data?.message || "Failed to fetch deliveries");
         toast.error("Failed to fetch deliveries");
       } finally {
         setIsLoading(false);
@@ -67,14 +56,12 @@ export function useDeliveries() {
   }, [fetchDeliveries, filter, limit]);
 
   const onPrev = () => page > 1 && fetchDeliveries(page - 1, filter, limit);
-  const onNext = () =>
-    page < totalPages && fetchDeliveries(page + 1, filter, limit);
+  const onNext = () => page < totalPages && fetchDeliveries(page + 1, filter, limit);
 
   const removeDelivery = async (id: string) => {
     try {
       await deleteDelivery(id);
-      toast.success("Delivery deleted successfully");
-
+      toast.success("Delivery deleted");
       if (deliveries.length === 1 && page > 1) {
         fetchDeliveries(page - 1, filter, limit);
       } else {

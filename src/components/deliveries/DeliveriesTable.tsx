@@ -35,12 +35,11 @@ const DeliveriesTable: React.FC = React.memo(() => {
     try {
       exportDeliveriesCsv({ deliveries, filter, page });
     } catch {
-      // toast imported in hook; keep UI layer clean. Add a toast here if desired.
       console.error("Export failed");
     }
   };
 
-  const tableBody = useMemo(() => {
+  const body = useMemo(() => {
     if (isLoading) {
       return (
         <TableSkeleton
@@ -51,7 +50,6 @@ const DeliveriesTable: React.FC = React.memo(() => {
         />
       );
     }
-
     if (err) {
       return (
         <tr>
@@ -61,22 +59,16 @@ const DeliveriesTable: React.FC = React.memo(() => {
         </tr>
       );
     }
-
     if (!deliveries.length) {
       return (
-        <EmptyStateRow
-          colSpan={8}
-          title="No deliveries found"
-          hint="Try changing filters or refreshing."
-        />
+        <EmptyStateRow colSpan={8} title="No deliveries found" hint="Try changing filters or refreshing." />
       );
     }
-
     return (
       <>
         {deliveries.map((d) => (
           <DeliveriesRow
-            key={d.deliveryId}
+            key={d.parcelId}
             d={d}
             onDelete={(id) => {
               setDeleteId(id);
@@ -87,7 +79,7 @@ const DeliveriesTable: React.FC = React.memo(() => {
         ))}
       </>
     );
-  }, [isLoading, err, deliveries, limit]);
+  }, [deliveries, isLoading, err, limit]);
 
   return (
     <div className="p-6" aria-busy={isLoading}>
@@ -120,40 +112,24 @@ const DeliveriesTable: React.FC = React.memo(() => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead>
               <tr className="bg-[#f0fdf4]">
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">
-                  Parcel ID
-                </th>
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">
-                  Driver ID
-                </th>
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">
-                  Driver Name
-                </th>
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center hidden md:table-cell">
-                  Payment
-                </th>
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center hidden md:table-cell">
-                  Distance
-                </th>
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">
-                  Package
-                </th>
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">
-                  Actions
-                </th>
+                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">Parcel ID</th>
+                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">Driver ID</th>
+                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">Driver Name</th>
+                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">Status</th>
+                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center hidden md:table-cell">Payment</th>
+                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center hidden md:table-cell">Distance</th>
+                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">Package</th>
+                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">{tableBody}</tbody>
+            <tbody className="divide-y divide-gray-200">{body}</tbody>
           </table>
         </div>
 
         <div className="px-4 py-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <Pagination
-              page={/* from hook */ page}
+              page={page}
               totalPages={totalPages}
               onPrev={onPrev}
               onNext={onNext}
@@ -161,7 +137,10 @@ const DeliveriesTable: React.FC = React.memo(() => {
             />
             <div className="text-xs text-gray-500">
               Showing <strong>{deliveries.length}</strong> item(s) • Range:{" "}
-              <strong className="capitalize">{filter}</strong> • Limit {limit}
+              <strong className="capitalize">
+                {filter === "six_months" ? "six months" : filter}
+              </strong>{" "}
+              • Limit {limit}
             </div>
           </div>
         </div>

@@ -1,29 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { getImageUrl } from "../utils/getImageUrl";
 import { handleError } from "../utils/handleApiResponse";
 import { AiFillStar } from "react-icons/ai";
-import { useNavigate } from "react-router-dom";
 import ConfirmModal from "../components/ConfirmModal";
 import { FaArrowLeft } from "react-icons/fa";
+import AvatarSigned from "../components/driverDetail/AvatarSigned";
+import DriverDocuments from "../components/driverDetail/DriverDocuments";
+import { Skeleton } from "../components/ui/shared/Skeleton";
 import {
   getDriverById,
   deleteDriver,
   verifyDriverDocs,
 } from "../api/deliveryService";
-import {
-  FiMapPin,
-  FiPhone,
-  FiMail,
-  FiCalendar,
-  FiCreditCard,
-  FiTruck,
-  FiFileText,
-  FiCheck,
-  FiClock,
-  FiX,
-} from "react-icons/fi";
 
 interface DriverData {
   user: {
@@ -36,7 +25,7 @@ interface DriverData {
     lastName: string;
     phone: string;
     dateOfBirth: string;
-    driverStatus: string;
+    driverStatus: "on-delivery" | "available" | "offline" | string;
     rating: number;
     ratingCount: number;
     incidentHistory: any[];
@@ -63,6 +52,7 @@ interface DriverData {
       nationalInsurance: string;
       disclosureReceipt: string;
       dvlaCheck: string;
+      [key: string]: string; // allow future doc types
     };
     vehicle: {
       make: string;
@@ -85,17 +75,16 @@ const DriverDetailsPage: React.FC = () => {
   const [driver, setDriver] = useState<DriverData | null>(null);
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchDriver = async (id: string) => {
+    const fetchDriver = async (driverId: string) => {
       try {
         setLoading(true);
-        const data = await getDriverById(id);
+        const data = await getDriverById(driverId);
         setDriver(data?.data);
       } catch (error) {
         handleError(error, "Failed to fetch driver details");
@@ -104,35 +93,36 @@ const DriverDetailsPage: React.FC = () => {
       }
     };
 
-    if (id) {
-      fetchDriver(id);
-    }
+    if (id) fetchDriver(id);
   }, [id]);
 
-  const handleDeleteClick = (id: string) => {
-    setDeleteId(id);
+  const handleDeleteClick = (driverId: string) => {
+    setDeleteId(driverId);
     setModalOpen(true);
   };
 
   const confirmDelete = async () => {
-    if (deleteId) {
+    if (!deleteId) return;
+    try {
       await deleteDriver(deleteId);
       toast.success("Driver deleted!");
-      navigate(-1); // go back after delete
+      navigate(-1);
+    } catch (err) {
+      handleError(err, "Failed to delete driver");
     }
   };
 
-  const handleVerify = async (id?: string) => {
-    if (!id) return;
+  const handleVerify = async (driverId?: string) => {
+    if (!driverId) return;
     setVerifying(true);
     try {
-      await verifyDriverDocs(id);
+      await verifyDriverDocs(driverId);
       toast.success("Driver verified!");
       // refetch driver to update status
-      const data = await getDriverById(id);
+      const data = await getDriverById(driverId);
       setDriver(data?.data);
     } catch (error) {
-      toast.error("Failed to verify driver.");
+      handleError(error, "Failed to verify driver");
     } finally {
       setVerifying(false);
     }
@@ -159,25 +149,94 @@ const DriverDetailsPage: React.FC = () => {
     });
   };
 
-  const documentLabels = {
-    driverLicenseFront: "Driver License (Front)",
-    driverLicenseBack: "Driver License (Back)",
-    vehicleInsurance: "Vehicle Insurance",
-    goodsForHireInsurance: "Goods for Hire Insurance",
-    publicLiabilityInsurance: "Public Liability Insurance",
-    proofOfAddress: "Proof of Address",
-    rightToWork: "Right to Work",
-    nationalInsurance: "National Insurance",
-    disclosureReceipt: "Disclosure Receipt",
-    dvlaCheck: "DVLA Check",
-  };
+  if (loading)
+    return (
+      <div className="max-w-6xl mx-auto p-6 space-y-6">
+        {/* Header Card Skeleton */}
+        <div className="bg-white rounded-lg border overflow-hidden">
+          <div className="bg-[#f0fdf4] px-6 py-4 border-b flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Skeleton width={36} height={36} rounded="full" className="!bg-[#dcfce7]" />
+              <Skeleton width={180} height={20} />
+            </div>
+            <div className="flex items-center gap-3">
+              <Skeleton width={110} height={36} className="rounded-lg" />
+              <Skeleton width={90} height={36} className="rounded-lg" />
+            </div>
+          </div>
+          <div className="p-6">
+            <div className="flex flex-col md:flex-row gap-6">
+              {/* Avatar + basic */}
+              <div className="flex flex-col items-center md:items-start">
+                <Skeleton width={128} height={128} rounded="full" className="w-32 h-32" />
+                <div className="mt-4 text-center md:text-left space-y-2">
+                  <Skeleton width={220} height={18} />
+                  <Skeleton width={160} height={14} />
+                  <div className="flex items-center justify-center md:justify-start gap-2 mt-2">
+                    <Skeleton width={90} height={22} className="rounded-full" />
+                    <Skeleton width={90} height={22} className="rounded-full" />
+                  </div>
+                </div>
+              </div>
+              {/* Info columns */}
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <Skeleton width={140} height={12} />
+                  <Skeleton width="80%" height={14} />
+                  <Skeleton width={140} height={12} />
+                  <Skeleton width="70%" height={14} />
+                  <Skeleton width={140} height={12} />
+                  <Skeleton width="85%" height={14} />
+                </div>
+                <div className="space-y-3">
+                  <Skeleton width={140} height={12} />
+                  <Skeleton width="60%" height={14} />
+                  <Skeleton width={140} height={12} />
+                  <Skeleton width="50%" height={14} />
+                  <Skeleton width={140} height={12} />
+                  <Skeleton width="65%" height={14} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-  if (loading) return <div className="p-4">Loading...</div>;
+        {/* Documents skeleton */}
+        <div className="bg-white rounded-lg border">
+          <div className="bg-[#f0fdf4] px-4 py-3 border-b">
+            <Skeleton width={120} height={18} />
+          </div>
+          <div className="p-4 space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                <Skeleton width="40%" height={14} />
+                <Skeleton width={60} height={16} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Payment details skeleton */}
+        <div className="bg-white rounded-lg border">
+          <div className="bg-[#f0fdf4] px-4 py-3 border-b">
+            <Skeleton width={140} height={18} />
+          </div>
+          <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton width={120} height={12} />
+                <Skeleton width="70%" height={14} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   if (!driver) return <div className="p-4">No driver found</div>;
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
-      {/* Header Section */}
+      {/* Header Card */}
       <div className="bg-white rounded-lg border overflow-hidden">
         <div className="bg-[#f0fdf4] px-6 py-4 border-b flex items-center justify-between">
           {/* Left: Back + Title */}
@@ -188,9 +247,7 @@ const DriverDetailsPage: React.FC = () => {
             >
               <FaArrowLeft className="w-5 h-5 text-[#22c55e]" />
             </button>
-            <h1 className="text-2xl font-bold text-[#22c55e]">
-              Driver Profile
-            </h1>
+            <h1 className="text-2xl font-bold text-[#22c55e]">Driver Profile</h1>
           </div>
 
           {/* Right: Actions */}
@@ -206,17 +263,10 @@ const DriverDetailsPage: React.FC = () => {
             ) : (
               <button
                 onClick={() => id && handleVerify(id)}
-                disabled={loading}
+                disabled={loading || verifying}
                 className="px-4 py-2 rounded-lg bg-[#22c55e] text-white hover:bg-green-400 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {verifying ? (
-                  <>
-                    <span className="loader"></span>
-                    <span>Verifying...</span>
-                  </>
-                ) : (
-                  "Verify Docs"
-                )}
+                {verifying ? "Verifying..." : "Verify Docs"}
               </button>
             )}
 
@@ -229,17 +279,17 @@ const DriverDetailsPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Content */}
         <div className="p-6">
           <div className="flex flex-col md:flex-row gap-6">
-            {/* Profile Picture */}
+            {/* Profile Picture + Basic */}
             <div className="flex flex-col items-center md:items-start">
-              <img
-                src={
-                  getImageUrl(driver.user.profilePicture) || "/placeholder.svg"
-                }
-                alt="Driver Profile"
-                className="w-32 h-32 rounded-full object-cover border-4 border-[#22c55e]"
+              <AvatarSigned
+                value={driver.user.profilePicture}
+                size={128}
+                className="w-32 h-32"
               />
+
               <div className="mt-4 text-center md:text-left">
                 <h2 className="text-xl font-semibold text-gray-900">
                   {driver.user.firstName} {driver.user.lastName}
@@ -268,25 +318,26 @@ const DriverDetailsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Contact Info */}
+            {/* Contact + Vehicle */}
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Column 1 */}
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <FiMail className="text-[#22c55e]" />
+                  <span className="text-[#22c55e]">📧</span>
                   <div>
                     <p className="text-sm text-gray-600">Email</p>
-                    <p className="font-medium">{driver.user.email}</p>
+                    <p className="font-medium break-all">{driver.user.email}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <FiPhone className="text-[#22c55e]" />
+                  <span className="text-[#22c55e]">📞</span>
                   <div>
                     <p className="text-sm text-gray-600">Phone</p>
                     <p className="font-medium">{driver.user.phone}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <FiCalendar className="text-[#22c55e]" />
+                  <span className="text-[#22c55e]">📅</span>
                   <div>
                     <p className="text-sm text-gray-600">Date of Birth</p>
                     <p className="font-medium">
@@ -295,7 +346,7 @@ const DriverDetailsPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <FiMapPin className="text-[#22c55e]" />
+                  <span className="text-[#22c55e]">📍</span>
                   <div>
                     <p className="text-sm text-gray-600">Address</p>
                     <p className="font-medium">
@@ -307,6 +358,7 @@ const DriverDetailsPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Column 2 */}
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <div>
@@ -314,7 +366,7 @@ const DriverDetailsPage: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <div className="flex text-yellow-400">
                         {Array.from(
-                          { length: Math.floor(driver.user.rating) },
+                          { length: Math.floor(driver.user.rating || 0) },
                           (_, i) => (
                             <AiFillStar key={i} />
                           )
@@ -327,7 +379,7 @@ const DriverDetailsPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <FiClock className="text-[#22c55e]" />
+                  <span className="text-[#22c55e]">⏰</span>
                   <div>
                     <p className="text-sm text-gray-600">Member Since</p>
                     <p className="font-medium">
@@ -336,12 +388,14 @@ const DriverDetailsPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <FiTruck className="text-[#22c55e]" />
+                  <span className="text-[#22c55e]">🚚</span>
                   <div>
                     <p className="text-sm text-gray-600">Vehicle</p>
                     <p className="font-medium">
-                      {driver.user.vehicle.make ? driver.user.vehicle.make : "Unknown"} {driver.user.vehicle.model} (
-                      {driver.user.vehicle.year}) - {driver.user.vehicle.color}
+                      {(driver.user.vehicle.make || "Unknown") +
+                        " " +
+                        (driver.user.vehicle.model || "")}{" "}
+                      ({driver.user.vehicle.year}) - {driver.user.vehicle.color}
                     </p>
                     <p className="text-sm">
                       Plate: {driver.user.vehicle.licensePlate}
@@ -350,43 +404,19 @@ const DriverDetailsPage: React.FC = () => {
                 </div>
               </div>
             </div>
+            {/* /Contact + Vehicle */}
           </div>
         </div>
       </div>
 
       {/* Documents */}
-      <div className="bg-white rounded-lg border">
-        <div className="bg-[#f0fdf4] px-4 py-3 border-b">
-          <h3 className="font-semibold text-[#22c55e] flex items-center gap-2">
-            <FiFileText /> Documents
-          </h3>
-        </div>
-        <div className="p-4">
-          <div className="grid grid-cols-1 gap-2">
-            {Object.entries(driver.user.documents).map(([key, value]) => (
-              <div
-                key={key}
-                className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-50"
-                onClick={() => setSelectedDoc(getImageUrl(value))}
-              >
-                <span className="text-sm">
-                  {documentLabels[key as keyof typeof documentLabels]}
-                </span>
-                <div className="flex items-center gap-2">
-                  <FiCheck className="text-[#22c55e] w-4 h-4" />
-                  <span className="text-xs text-[#22c55e]">View</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <DriverDocuments documents={driver.user.documents} />
 
       {/* Payment Details */}
       <div className="bg-white rounded-lg border">
         <div className="bg-[#f0fdf4] px-4 py-3 border-b">
           <h3 className="font-semibold text-[#22c55e] flex items-center gap-2">
-            <FiCreditCard /> Payment Details
+            💳 Payment Details
           </h3>
         </div>
         <div className="p-4">
@@ -399,9 +429,7 @@ const DriverDetailsPage: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">Bank Name</p>
-              <p className="font-medium">
-                {driver.user.paymentDetails.bankName}
-              </p>
+              <p className="font-medium">{driver.user.paymentDetails.bankName}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600">Account Number</p>
@@ -411,37 +439,13 @@ const DriverDetailsPage: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">Sort Code</p>
-              <p className="font-medium">
-                {driver.user.paymentDetails.sortCode}
-              </p>
+              <p className="font-medium">{driver.user.paymentDetails.sortCode}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Modal for Document Preview */}
-      {selectedDoc && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-xl w-full max-h-[60vh] flex flex-col">
-            <div className="flex justify-end p-2">
-              <button
-                className="text-gray-500 hover:text-gray-700 transition-colors"
-                onClick={() => setSelectedDoc(null)}
-              >
-                <FiX size={24} />
-              </button>
-            </div>
-            <div className="overflow-auto p-4 flex-1 flex items-center justify-center">
-              <img
-                src={selectedDoc}
-                alt="Document Preview"
-                className="max-w-full max-h-[80vh] object-contain"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* Confirm Delete Modal */}
       <ConfirmModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}

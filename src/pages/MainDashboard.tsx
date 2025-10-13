@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { MdLocalShipping, MdDirections } from "react-icons/md";
 import RouteStatsChart from "../components/RouteStatsChart";
+import SystemStatsTop from "../components/dashboard/stats/SystemStatsTop";
+import OrdersOverview from "../components/dashboard/oderOverview/OrdersOverview";
 import DeliveredTable, {
   DeliveredRow,
   DeliveredMeta,
@@ -10,85 +12,18 @@ import InProgressTable, {
   InProgressMeta,
 } from "../components/reports/InProgressTable";
 import { SkeletonStatCard } from "../components/ui/shared/Skeleton";
+import Segmented from "../utils/Dashboard/Segmented";
 
 import {
   getParcelReports,
   RangeType,
   GetParcelReportsParams,
 } from "../api/deliveryService";
-
-/* ---------- Types ---------- */
-interface DeliveredType {
-  sequence: string;
-  driver: string;
-  pickupAt: string;
-  deliveredAt: string;
-  dropoffLocation: string;
-  timeLeft: string | number;
-  hours: string;
-  status: string;
-}
-interface InProgressType {
-  sequence: string;
-  driver: string;
-  pickupAt: string;
-  dropoffLocation: string;
-  timeLeft: string | number;
-  status: string;
-}
-interface ListMeta {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-  results: number;
-}
-
-/* ---------- Helpers ---------- */
-function parseLateEarly(s: string) {
-  const lower = s.toLowerCase().trim();
-  const isLate = lower.includes("late");
-  const isEarly = lower.includes("early");
-  let days = 0,
-    hours = 0,
-    mins = 0;
-  const re = /(?:(\d+)\s*d)?\s*(?:(\d+)\s*h)?\s*(?:(\d+)\s*m(?:in)?)?/i;
-  const match = lower.match(re);
-  if (match) {
-    days = Number(match[1] || 0);
-    hours = Number(match[2] || 0);
-    mins = Number(match[3] || 0);
-  } else {
-    const m2 = lower.match(/(\d+)\s*m(?:in)?/);
-    if (m2) mins = Number(m2[1]);
-  }
-  return { isLate, isEarly, days, hours, mins };
-}
-
-/* ---------- Small UI bits ---------- */
-const Segmented: React.FC<{
-  value: RangeType;
-  onChange: (v: RangeType) => void;
-}> = ({ value, onChange }) => {
-  const opts: RangeType[] = ["daily", "weekly", "monthly"];
-  return (
-    <div className="inline-flex rounded-xl border border-gray-200 bg-white p-1 shadow-sm">
-      {opts.map((opt) => (
-        <button
-          key={opt}
-          onClick={() => onChange(opt)}
-          className={`px-3.5 py-2 text-sm font-medium rounded-lg transition ${
-            value === opt
-              ? "bg-[#22c55e] text-white shadow"
-              : "text-gray-700 hover:bg-gray-50"
-          }`}
-        >
-          {opt.charAt(0).toUpperCase() + opt.slice(1)}
-        </button>
-      ))}
-    </div>
-  );
-};
+import { InProgressType, DeliveredType, ListMeta } from "../types/Dashboard";
+import CustomerFeedback from "../components/dashboard/feedback/CustomerFeedback";
+import TopDriversCard from "../components/dashboard/topDrivers/TopDriversCard";
+import RevenueTrendCard from "../components/dashboard/Revenue/RevenueTrendCard";
+import UserSegmentation from "../components/dashboard/user/UserSegmentation";
 
 /* ---------- Main Component ---------- */
 const DashboardContent: React.FC = () => {
@@ -251,8 +186,26 @@ const DashboardContent: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6">
+      {/* NEW: System snapshot cards */}
+      <SystemStatsTop />
+
       {/* Keep as-is */}
-      <RouteStatsChart />
+      {/* <RouteStatsChart /> */}
+
+      {/* Orders overview (NEW) */}
+      <OrdersOverview className="mt-2" initialDays={7} />
+       
+      {/* Customer feedback (NEW) */}
+      <CustomerFeedback />
+
+      {/* Revenue Trend (NEW) */}
+      <RevenueTrendCard className="mt-6" initialMonths={12} currency="$" />
+
+      {/* User Segmentation (NEW) */}
+      <UserSegmentation className="md:col-span-2" />
+
+      {/* Top Drivers (NEW) */}
+      <TopDriversCard className="mt-6" initialQuery={{ limit: 5, sort: "rating" }} />
 
       {/* Range Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">

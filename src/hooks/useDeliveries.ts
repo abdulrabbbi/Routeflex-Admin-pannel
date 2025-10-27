@@ -8,7 +8,7 @@ import {
   RangeFilter,
 } from "../types/deliveries";
 
-export function useDeliveries() {
+export function useDeliveries(statusFilter?: "completed" | "cancelled") {
   const [deliveries, setDeliveries] = useState<DeliveryRowApi[]>([]);
   const [filter, setFilter] = useState<RangeFilter>("daily");
   const [page, setPage] = useState(1);
@@ -21,12 +21,33 @@ export function useDeliveries() {
     isLoading && page === 1 && deliveries.length === 0 && !err;
 
   const fetchDeliveries = useCallback(
-    async (pageNum: number = 1, selectedFilter: RangeFilter = filter, lm: number = limit) => {
+    async (
+      pageNum: number = 1,
+      selectedFilter: RangeFilter = filter,
+      lm: number = limit
+    ) => {
       try {
         setIsLoading(true);
         setErr("");
-        const res: DeliveriesApiResponse = await getDeliveries(lm, pageNum, selectedFilter);
-        const items = res?.data?.deliveries ?? [];
+
+        // 👇 Pass the optional statusFilter to your API
+        const res: DeliveriesApiResponse = await getDeliveries(
+          lm,
+          pageNum,
+          selectedFilter,
+          statusFilter // <--- add this argument
+        );
+
+        let items = res?.data?.deliveries ?? [];
+
+        // 👇 If your API doesn't yet support filtering by status,
+        // you can also filter here on the client:
+        if (statusFilter) {
+          items = items.filter(
+            (d) => d.status.toLowerCase() === statusFilter.toLowerCase()
+          );
+        }
+
         setDeliveries(items);
 
         const total = typeof res?.total === "number" ? res.total : 0;
@@ -42,13 +63,15 @@ export function useDeliveries() {
       } catch (e: any) {
         setDeliveries([]);
         setTotalPages(1);
-        setErr(e?.response?.data?.message || "Failed to fetch deliveries");
-        toast.error("Failed to fetch deliveries");
+        const message =
+          e?.response?.data?.message || "Failed to fetch deliveries";
+        setErr(message);
+        toast.error(message);
       } finally {
         setIsLoading(false);
       }
     },
-    [filter, limit]
+    [filter, limit, statusFilter] // 👈 include it as a dependency
   );
 
   useEffect(() => {
@@ -62,6 +85,8 @@ export function useDeliveries() {
     try {
       await deleteDelivery(id);
       toast.success("Delivery deleted");
+
+      // smart re-fetch
       if (deliveries.length === 1 && page > 1) {
         fetchDeliveries(page - 1, filter, limit);
       } else {

@@ -8,13 +8,20 @@ import ParcelTrackingPage from "../pages/ParcelTrackingPage";
 import LoginPage from "../pages/Auth/Login";
 import SettingsPage from "../pages/Settings";
 import DriverDetailsPage from "../pages/DriverDetailsPage";
-import UserTypesPage from "../pages/UserTypesPage";
+
 import FeedbackAdminPage from "../pages/FeedbackAdminPage";
 import RatingsAdminPage from "../pages/RatingsAdminPage";
 import RatingDetailsPage from "../pages/RatingDetailsPage";
 import OrdersPage from "../pages/OrdersPage";
-import OrderDetail from "../components/orders/OrderDetail";
+// import OrderDetail from "../components/orders/OrderDetail";
 import JobAssignmentPage from "../components/orders/JobAssignmentPage";
+import CancelledDeliveries from "../components/deliveries/CancelledDeliveries";
+import CompletedDeliveries from "../components/deliveries/CompletedDeliveries";
+import UserTypesPage from "../pages/UserTypesPage";
+import IndividualUsersPage from "../components/users/IndividualUserPage";
+import BusinessUsersPage from "../components/users/BusinessUserPage";
+import PendingOrder from "../components/orders/PendingOrder";
+
 
 const ErrorFallback = () => (
   <div className="min-h-screen grid place-items-center p-6">
@@ -47,10 +54,27 @@ const Router = () =>
             { path: "tracking", element: <TrackingPage /> },
             { path: "tracking/driver/:id", element: <DriverDetailsPage /> },
             { path: "parcel-tracking", element: <ParcelTrackingPage /> },
+            { path: "parcel-tracking/completed", element: <CompletedDeliveries /> },
+            { path: "parcel-tracking/cancelled", element: <CancelledDeliveries /> },
+
+            // orders
             { path: "orders", element: <OrdersPage /> },
-            { path: "orders/:id", element: <OrderDetail /> },
+            { path: "pending-order", element: <PendingOrder /> },
+            // { path: "orders/:id", element: <OrderDetail /> },
+
+
+
+
             { path: "orders/assign", element: <JobAssignmentPage /> },
-            { path: "user-types", element: <UserTypesPage /> },
+            {
+              path: "user-types/individual",
+              element: <UserTypesPage role="individual" title="Individual Users" />,
+            },
+            {
+              path: "user-types/business",
+              element: <UserTypesPage role="business" title="Business Users" />,
+            },
+
             { path: "feedbacks", element: <FeedbackAdminPage /> },
             { path: "ratings", element: <RatingsAdminPage /> },
             { path: "ratings/:id", element: <RatingDetailsPage /> },

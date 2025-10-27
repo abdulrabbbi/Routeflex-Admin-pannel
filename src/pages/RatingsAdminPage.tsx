@@ -25,7 +25,7 @@ const RatingsAdminPage: React.FC = () => {
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-xl font-semibold">Ratings</h1>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center gap-2">
             <div className="relative">
               <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input

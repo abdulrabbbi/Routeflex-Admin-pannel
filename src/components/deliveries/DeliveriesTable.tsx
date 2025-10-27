@@ -11,7 +11,11 @@ import { StatsSkeleton } from "./StatsSkeleton";
 import { exportDeliveriesCsv } from "../../utils/deliveries/exportCsv";
 import { useDeliveries } from "../../hooks/useDeliveries";
 
-const DeliveriesTable: React.FC = React.memo(() => {
+interface DeliveriesTables {
+  statusFilter: "completed" | "cancelled";
+}
+
+const DeliveriesTable: React.FC<DeliveriesTables> = React.memo(({ statusFilter }) => {
   const {
     deliveries,
     filter,
@@ -26,7 +30,7 @@ const DeliveriesTable: React.FC = React.memo(() => {
     onPrev,
     onNext,
     removeDelivery,
-  } = useDeliveries();
+  } = useDeliveries(statusFilter); // pass filter here 👈
 
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -96,7 +100,8 @@ const DeliveriesTable: React.FC = React.memo(() => {
         message="Are you sure you want to delete this delivery? This action cannot be undone."
       />
 
-      {isInitialLoading && <StatsSkeleton />}
+      {isInitialLoading }
+      {/* {&& <StatsSkeleton />} */}
 
       <DeliveriesHeader
         filter={filter}
@@ -112,14 +117,14 @@ const DeliveriesTable: React.FC = React.memo(() => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead>
               <tr className="bg-[#f0fdf4]">
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">Parcel ID</th>
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">Driver ID</th>
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">Driver Name</th>
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">Status</th>
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center hidden md:table-cell">Payment</th>
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center hidden md:table-cell">Distance</th>
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">Package</th>
-                <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center">Actions</th>
+                <th className="px-2 py-3 text-xs text-[#22c55e] uppercase text-center">Parcel ID</th>
+                <th className="px-2 py-3 text-xs text-[#22c55e] uppercase text-center">Driver ID</th>
+                <th className="px-2 py-3 text-xs text-[#22c55e] uppercase text-center">Driver Name</th>
+                <th className="px-2 py-3 text-xs text-[#22c55e] uppercase text-center">Status</th>
+                {/* <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center hidden md:table-cell">Payment</th> */}
+                <th className="px-2 py-3 text-xs text-[#22c55e] uppercase text-center hidden md:table-cell">Distance</th>
+                <th className="px-2 py-3 text-xs text-[#22c55e] uppercase text-center hidden md:table-cell">Package</th>
+                <th className="px-2 py-3 text-xs text-[#22c55e] uppercase text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">{body}</tbody>

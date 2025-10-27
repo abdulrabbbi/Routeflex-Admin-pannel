@@ -9,6 +9,7 @@ import { Button } from "../../components/ui/Button";
 import { toast } from "react-hot-toast";
 import apiClient from "../../api/api";
 import { FiSearch, FiUser, FiPhone, FiX } from "react-icons/fi";
+import { MdCheck } from "react-icons/md";
 import { EmptyStateRow } from "../../components/ui/shared/EmptyStateRow";
 import type { Job } from "../../types/job";
 
@@ -98,6 +99,26 @@ export default function AssignDriverDialog({
       setAssigningId(null);
     }
   };
+
+  // Format a phone string like
+  // "PhoneNumber(countryISOCode: GB, countryCode: +44, number: 07543410710)"
+  // into "+44 07543410710 (GB)"
+
+  function formatPhone(phoneStr: string | null | undefined): string {
+    if (!phoneStr) return "—";
+
+    const regex =
+      /countryISOCode:\s*([A-Z]{2}),\s*countryCode:\s*([+\d]+),\s*number:\s*(\d+)/;
+
+    const match = phoneStr.match(regex);
+    if (!match) return phoneStr; // fallback if it doesn't match pattern
+
+    const [, countryISO, countryCode, number] = match;
+    return `${countryCode} ${number} (${countryISO})`;
+  }
+
+
+
 
   return (
     <Dialog
@@ -245,8 +266,7 @@ export default function AssignDriverDialog({
                         "—";
                       const vehicle =
                         d.vehicle?.make || d.vehicle?.model
-                          ? `${d.vehicle?.make || ""} ${
-                              d.vehicle?.model || ""
+                          ? `${d.vehicle?.make || ""} ${d.vehicle?.model || ""
                             }`.trim()
                           : "—";
 
@@ -269,7 +289,7 @@ export default function AssignDriverDialog({
                           <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                             <span className="inline-flex items-center gap-1.5">
                               <FiPhone className="text-gray-400" />
-                              <span>{d.phone || "—"}</span>
+                              <span>{formatPhone(d.phone) || "—"}</span>
                             </span>
                           </td>
 
@@ -283,9 +303,10 @@ export default function AssignDriverDialog({
                             <Button
                               onClick={() => assign(d._id)}
                               disabled={assigningId === d._id}
-                              className="bg-emerald-600 text-white px-4 py-2 text-sm hover:bg-emerald-700 rounded-lg disabled:opacity-60"
+                              title="Assign job to this driver"
+                              className="bg-green-600 text-white px-4 py-2 text-sm hover:bg-emerald-700 rounded-lg disabled:opacity-60"
                             >
-                              {assigningId === d._id ? "Assigning…" : "Assign"}
+                              {assigningId === d._id ? "Assigning…" : <MdCheck className="font-bold text-md"/>}
                             </Button>
                           </td>
                         </tr>

@@ -88,7 +88,7 @@ export default function NotificationsPanel({
 
   return (
     <section className={`flex flex-col ${className}`}>
-      <div className="flex items-center justify-between mb-4 sticky top-0 bg-white z-10">
+      <div className="flex items-center justify-between mb-4 sticky -top-5 bg-white z-10 p-3">
         <h3 className="text-lg font-semibold">Notifications</h3>
         <div className="flex items-center gap-3">
           <button
@@ -97,13 +97,7 @@ export default function NotificationsPanel({
           >
             Refresh
           </button>
-          <button
-            className="text-gray-500 text-sm hover:underline"
-            onClick={() => hardReplace([])}
-            title="Clear locally (testing)"
-          >
-            Clear
-          </button>
+          
         </div>
       </div>
 

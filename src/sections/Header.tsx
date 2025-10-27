@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { MdMenu, MdSearch, MdLightMode, MdNotifications } from "react-icons/md";
 import { Images } from "../assets/images";
 import { useLocation } from "react-router-dom";
 import { getImageUrl } from "../utils/getImageUrl";
 import { getSignedUrl, s3UrlToKey } from "../utils/s3";
+import NotificationsPanel from "../components/rightbar/NotificationsPanel";
 
 type User = {
   profilePicture?: string;
@@ -12,11 +13,13 @@ type User = {
   role?: string;
 };
 
-const Header = ({ onMenuClick, onNotificationClick }: any) => {
+const Header = ({ onMenuClick }: any) => {
   const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
-  // read user from storage on mount + when storage changes (e.g. after login in another tab)
+  // Read user from local or session storage
   useEffect(() => {
     const readUser = () => {
       const raw =
@@ -36,7 +39,23 @@ const Header = ({ onMenuClick, onNotificationClick }: any) => {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  // Build a safe image src, wait for DB/signed URL, and show a skeleton until loaded
+  // Toggle dropdowns
+  const toggleMenu = (menu: string) => {
+    setActiveMenu(activeMenu === menu ? null : menu);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setActiveMenu(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Handle user profile image
   const [profileSrc, setProfileSrc] = useState<string | null>(null);
   const [resolving, setResolving] = useState<boolean>(false);
   const [imgLoaded, setImgLoaded] = useState<boolean>(false);
@@ -50,16 +69,17 @@ const Header = ({ onMenuClick, onNotificationClick }: any) => {
       setImgLoaded(false);
       try {
         if (!v) {
-          // no server image → show default immediately (no waiting needed)
           if (!cancelled) {
             setProfileSrc(Images.Avatar);
             setImgLoaded(true);
           }
           return;
         }
+
         const isHttp = /^https?:/i.test(v);
         const isS3Http = isHttp && /amazonaws\.com/.test(v);
         const isKeyLikely = !isHttp && !v.startsWith("/");
+
         if (isS3Http || isKeyLikely) {
           const signed = await getSignedUrl(s3UrlToKey(v), 300);
           if (!cancelled) setProfileSrc(signed || Images.Avatar);
@@ -76,14 +96,14 @@ const Header = ({ onMenuClick, onNotificationClick }: any) => {
         if (!cancelled) setResolving(false);
       }
     };
-    void compute();
 
+    void compute();
     return () => {
       cancelled = true;
     };
   }, [user?.profilePicture]);
 
-  // map path -> label
+  // Map routes to labels
   const routeNames: Record<string, string> = {
     "/": "Dashboard",
     "/tracking": "Driver Tracking",
@@ -96,7 +116,7 @@ const Header = ({ onMenuClick, onNotificationClick }: any) => {
   const pageName = routeNames[location.pathname] || "Dashboard";
 
   return (
-    <header className="h-16 border-b bg-white">
+    <header className="h-16 border-b bg-white relative">
       <div className="h-full px-4 flex items-center">
         {/* Menu button */}
         <button
@@ -113,14 +133,14 @@ const Header = ({ onMenuClick, onNotificationClick }: any) => {
           <span className="text-sm font-medium">{pageName}</span>
         </nav>
 
-        <div className="ml-auto flex items-center space-x-4">
+        <div className="ml-auto  flex items-center space-x-4">
           {/* Search */}
-          <div className="hidden sm:flex items-center relative">
+          <div className="hidden md:flex items-center relative">
             <MdSearch className="absolute left-3 text-gray-400" size={20} />
             <input
               type="search"
               placeholder="Search..."
-              className="pl-10 pr-4 py-2 border rounded-lg w-[300px] focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="pl-10 pr-4 py-2 border  rounded-lg w-[300px] focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
@@ -130,12 +150,21 @@ const Header = ({ onMenuClick, onNotificationClick }: any) => {
           </button>
 
           {/* Notifications */}
-          <button
-            className="p-2 hover:bg-gray-100 rounded-lg lg:hidden"
-            onClick={onNotificationClick}
-          >
-            <MdNotifications size={20} />
-          </button>
+          <div className="relative" ref={menuRef}>
+            <button
+              className="p-2 hover:bg-gray-100 rounded-lg"
+              onClick={() => toggleMenu("notify")}
+            >
+              <MdNotifications size={20} />
+            </button>
+
+            {activeMenu === "notify" && (
+              <div className="absolute right-0 mt-2 bg-white  w-[300px] rounded-md shadow-full p-4 max-h-[400px] overflow-y-auto z-50">
+                
+                <NotificationsPanel />
+              </div>
+            )}
+          </div>
 
           {/* Profile */}
           <div className="relative h-8 w-8">
@@ -147,12 +176,10 @@ const Header = ({ onMenuClick, onNotificationClick }: any) => {
                 key={profileSrc}
                 src={profileSrc}
                 alt="Profile"
-                className={`h-8 w-8 rounded-full object-cover ${
-                  resolving || !imgLoaded ? "hidden" : "block"
-                }`}
+                className={`h-8 w-8 rounded-full object-cover ${resolving || !imgLoaded ? "hidden" : "block"
+                  }`}
                 onLoad={() => setImgLoaded(true)}
                 onError={(e) => {
-                  // final fallback if the URL 404s
                   e.currentTarget.src = Images.Avatar;
                   setImgLoaded(true);
                 }}

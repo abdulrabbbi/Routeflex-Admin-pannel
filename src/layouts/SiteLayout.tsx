@@ -23,10 +23,10 @@ const DashboardLayout = () => {
             <Outlet />
           </main>
 
-          <RightSidebar
+          {/* <RightSidebar
             isOpen={rightSidebarOpen}
             setIsOpen={setRightSidebarOpen}
-          />
+          /> */}
         </div>
       </div>
     </div>

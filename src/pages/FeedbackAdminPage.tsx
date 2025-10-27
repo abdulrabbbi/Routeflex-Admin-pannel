@@ -4,12 +4,9 @@ import {
   FiDownload,
   FiRefreshCcw,
   FiSearch,
-  FiTrash2,
   FiX,
 } from "react-icons/fi";
-import { labelForUser } from "../utils/labelForUser";
 import FeedbackDetailDrawer from "../components/feedback/FeedbackDetailDrawer";
-
 import {
   Feedback,
   FeedbackType,
@@ -17,7 +14,6 @@ import {
   getFeedbackById,
   deleteFeedback,
 } from "../api/feedbackService";
-import { TypeBadge, RatingStars } from "../components/feedback/Atoms";
 import FeedbackTable from "../components/feedback/FeedbackTable";
 
 type RatingFilter = "all" | 1 | 2 | 3 | 4 | 5;
@@ -34,11 +30,9 @@ const types: (FeedbackType | "all")[] = [
 const ratingOptions: RatingFilter[] = ["all", 5, 4, 3, 2, 1];
 
 const FeedbackAdminPage: React.FC = () => {
-  // table state
   const [items, setItems] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // filters/paging
   const [q, setQ] = useState("");
   const [type, setType] = useState<FeedbackType | "all">("all");
   const [rating, setRating] = useState<RatingFilter>("all");
@@ -46,7 +40,6 @@ const FeedbackAdminPage: React.FC = () => {
   const [limit, setLimit] = useState<10 | 20 | 50>(10);
   const [totalPages, setTotalPages] = useState(1);
 
-  // detail drawer
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<Feedback | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -159,97 +152,18 @@ const FeedbackAdminPage: React.FC = () => {
     }
   };
 
-  const table = useMemo(() => items, [items]);
-
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
+    <div className="p-4 sm:p-6 space-y-6">
+      {/* Header + Filters */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="p-4 sm:p-6 border-b border-gray-100 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <h1 className="text-lg font-semibold text-[#1e1e38]">
               User Feedback
             </h1>
 
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Search */}
-              <div className="relative">
-                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  placeholder="Search subject/message"
-                  className="pl-9 pr-9 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-                {q && (
-                  <button
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    onClick={() => setQ("")}
-                    aria-label="Clear"
-                  >
-                    <FiX />
-                  </button>
-                )}
-              </div>
-
-              {/* Type */}
-              <select
-                value={type}
-                onChange={(e) => {
-                  setPage(1);
-                  setType(e.target.value as any);
-                }}
-                className="border rounded-lg px-3 py-2 text-sm"
-              >
-                {types.map((t) => (
-                  <option key={t} value={t}>
-                    {t === "all"
-                      ? "All types"
-                      : t.charAt(0).toUpperCase() + t.slice(1)}
-                  </option>
-                ))}
-              </select>
-
-              {/* Rating */}
-              <select
-                value={String(rating)}
-                onChange={(e) => {
-                  setPage(1);
-                  const v =
-                    e.target.value === "all"
-                      ? "all"
-                      : (Number(e.target.value) as RatingFilter);
-                  setRating(v);
-                }}
-                className="border rounded-lg px-3 py-2 text-sm"
-              >
-                {ratingOptions.map((r) => (
-                  <option key={String(r)} value={String(r)}>
-                    {r === "all" ? "All ratings" : `${r}★`}
-                  </option>
-                ))}
-              </select>
-
-              {/* Rows */}
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-600">Rows:</label>
-                <select
-                  value={limit}
-                  onChange={(e) => {
-                    setLimit(Number(e.target.value) as 10 | 20 | 50);
-                    setPage(1);
-                  }}
-                  className="border rounded-lg px-2 py-2 text-sm"
-                >
-                  {[10, 20, 50].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Actions */}
+            {/* Action buttons */}
+            <div className="flex flex-wrap gap-2 sm:gap-3">
               <button
                 onClick={onRefresh}
                 disabled={loading}
@@ -265,23 +179,104 @@ const FeedbackAdminPage: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
+            {/* Search */}
+            <div className="relative w-full sm:w-64">
+              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search subject/message"
+                className="w-full pl-9 pr-9 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              {q && (
+                <button
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  onClick={() => setQ("")}
+                >
+                  <FiX />
+                </button>
+              )}
+            </div>
+
+            {/* Type */}
+            <select
+              value={type}
+              onChange={(e) => {
+                setPage(1);
+                setType(e.target.value as any);
+              }}
+              className="border rounded-lg px-3 py-2 text-sm w-full sm:w-auto"
+            >
+              {types.map((t) => (
+                <option key={t} value={t}>
+                  {t === "all"
+                    ? "All types"
+                    : t.charAt(0).toUpperCase() + t.slice(1)}
+                </option>
+              ))}
+            </select>
+
+            {/* Rating */}
+            <select
+              value={String(rating)}
+              onChange={(e) => {
+                setPage(1);
+                const v =
+                  e.target.value === "all"
+                    ? "all"
+                    : (Number(e.target.value) as RatingFilter);
+                setRating(v);
+              }}
+              className="border rounded-lg px-3 py-2 text-sm w-full sm:w-auto"
+            >
+              {ratingOptions.map((r) => (
+                <option key={String(r)} value={String(r)}>
+                  {r === "all" ? "All ratings" : `${r}★`}
+                </option>
+              ))}
+            </select>
+
+            {/* Rows per page */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600">Rows:</label>
+              <select
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value) as 10 | 20 | 50);
+                  setPage(1);
+                }}
+                className="border rounded-lg px-2 py-2 text-sm"
+              >
+                {[10, 20, 50].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* Table */}
-        <FeedbackTable
-          items={items}
-          loading={loading}
-          page={page}
-          totalPages={totalPages}
-          onPrev={() => setPage((p) => Math.max(1, p - 1))}
-          onNext={() => setPage((p) => Math.min(totalPages, p + 1))}
-          onView={openDetail}
-          onDelete={onDelete}
-          deletingId={deletingId}
-        />
+        <div className="overflow-x-auto">
+          <FeedbackTable
+            items={items}
+            loading={loading}
+            page={page}
+            totalPages={totalPages}
+            onPrev={() => setPage((p) => Math.max(1, p - 1))}
+            onNext={() => setPage((p) => Math.min(totalPages, p + 1))}
+            onView={openDetail}
+            onDelete={onDelete}
+            deletingId={deletingId}
+          />
+        </div>
 
-        {/* Footer summary */}
-        <div className="px-6 py-4 text-xs text-gray-500 flex items-center justify-between">
+        {/* Footer */}
+        <div className="px-4 sm:px-6 py-4 text-xs text-gray-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <span>
             Showing <strong>{items.length}</strong> row(s) • Page{" "}
             <strong>{page}</strong> of{" "}

@@ -4,9 +4,11 @@ import Tag from "../../components/ui/shared/Tag";
 import { currency } from "../../utils/number";
 import type { Job } from "../../types/job";
 import { EmptyStateRow } from "../../components/ui/shared/EmptyStateRow";
-
+import { FiEye } from "react-icons/fi";
+import { MdLocalShipping } from "react-icons/md";
 // ✅ import the shared skeleton rows
 import { TableSkeleton } from "../../components/ui/shared/Skeleton";
+import { FaEye } from "react-icons/fa";
 
 function StatusChip(job: Job) {
   if (job.status === "cancelled") return <Tag color="red">Cancelled</Tag>;
@@ -49,7 +51,7 @@ export default function JobsTableLite({
             <th className="px-4 py-3 text-left">Order</th>
             <th className="px-4 py-3 text-left">Price</th>
             <th className="px-4 py-3 text-left">Distance (km)</th>
-            <th className="px-4 py-3 text-left">Customer Email</th>
+            <th className="px-4 py-3 text-left">Customer Name</th>
             <th className="px-4 py-3 text-left">Status</th>
             <th className="px-4 py-3 text-right">Action</th>
           </tr>
@@ -131,24 +133,29 @@ export default function JobsTableLite({
 
                 return (
                   <tr key={job._id} className="hover:bg-gray-50">
-                    <td className="px-4 py-4 font-semibold text-gray-900">
+                    <td className="px-4 py-4 font-semibold text-sm text-gray-900">
                       {idShort}
                     </td>
-                    <td className="px-4 py-4 text-gray-800">{price}</td>
-                    <td className="px-4 py-4 text-gray-800">{distance}</td>
-                    <td className="px-4 py-4 text-gray-800">{email}</td>
+                    <td className="px-4 py-4 text-sm text-gray-800">{price}</td>
+                    <td className="px-4 py-4 text-sm text-gray-800">{distance}</td>
+                    <td className="px-4 py-4 text-sm text-gray-800">{email}</td>
                     <td className="px-4 py-4">{StatusChip(job)}</td>
                     <td className="px-4 py-4">
-                      <div className="flex items-center justify-end">
-                        <DotsMenu
-                          items={[
-                            {
-                              label: "Assign to Driver",
-                              onClick: () => onAssign(job._id),
-                            },
-                            { label: "View", onClick: () => onView(job._id) },
-                          ]}
-                        />
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => onView(job._id)}
+                          className="text-green-600 text-xl px-3 py-2 rounded-full hover:bg-gray-300"
+                          title="View Details"
+                        >
+                          <FiEye />
+                        </button>
+                        <button
+                          onClick={() => onAssign(job._id)}
+                          className="text-green-600 text-xl px-3 py-2 rounded-full hover:bg-gray-300"
+                          title="Assign Delivery"
+                        >
+                          <MdLocalShipping />
+                        </button>
                       </div>
                     </td>
                   </tr>

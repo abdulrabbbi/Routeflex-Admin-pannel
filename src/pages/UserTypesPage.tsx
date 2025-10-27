@@ -11,42 +11,21 @@ import * as XLSX from "xlsx";
 
 type AnyUser = BusinessUser | IndividualUser;
 
-const SegmentedToggle: React.FC<{
-  value: Role;
-  onChange: (v: Role) => void;
-}> = ({ value, onChange }) => {
-  const options: Array<{ id: Role; label: string }> = [
-    { id: "individual", label: "Individual" },
-    { id: "business", label: "Business" },
-  ];
-  return (
-    <div className="inline-flex rounded-xl border border-gray-200 bg-white p-1 shadow-sm">
-      {options.map((opt) => (
-        <button
-          key={opt.id}
-          onClick={() => onChange(opt.id)}
-          className={`px-4 py-2 text-sm font-medium rounded-lg transition ${
-            value === opt.id
-              ? "bg-[#22c55e] text-white shadow"
-              : "text-gray-700 hover:bg-gray-50"
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-  );
-};
+interface Props {
+  role: Role;
+  title?: string;
+}
 
-const UserTypesPage: React.FC = () => {
-  const [role, setRole] = useState<Role>("individual");
-  const [page, setPage] = useState<number>(1);
-  const [limit, setLimit] = useState<number>(10);
+const UserTypesPage: React.FC<Props> = ({ role, title }) => {
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [users, setUsers] = useState<AnyUser[]>([]);
-  const [totalPages, setTotalPages] = useState<number>(1);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [err, setErr] = useState<string>("");
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
 
+
+  
   const queryKey = useMemo(() => ({ role, page, limit }), [role, page, limit]);
 
   const fetchUsers = useCallback(async () => {
@@ -72,12 +51,11 @@ const UserTypesPage: React.FC = () => {
     }
   }, [queryKey]);
 
-  // NEW function:
   const exportAllToXlsx = async () => {
     try {
       const all: AnyUser[] = [];
       let pg = 1;
-      const pageSize = 200; // fetch in chunks
+      const pageSize = 200;
 
       while (true) {
         const res = await getUsersByRole<AnyUser>(role, pageSize, pg);
@@ -88,15 +66,14 @@ const UserTypesPage: React.FC = () => {
         pg += 1;
       }
 
-      // include ALL fields from the API, plus a few normalized helpers
       const rows = all.map((u) => ({
-        id: u._id || u.id || "",
+        id: u._id || (u as any).id || "",
         role,
         name:
           role === "business"
             ? (u as any).contactPerson || (u as any).businessName || ""
             : (u as any).fullName || "",
-        ...u, // keep every API field
+        ...u,
       }));
 
       const ws = XLSX.utils.json_to_sheet(rows);
@@ -113,22 +90,18 @@ const UserTypesPage: React.FC = () => {
     fetchUsers();
   }, [fetchUsers]);
 
-  // Reset page when role/limit changes
   useEffect(() => {
     setPage(1);
   }, [role, limit]);
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900">Users</h1>
-          <SegmentedToggle value={role} onChange={setRole} />
-        </div>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900">
+          {title || (role === "business" ? "Business Users" : "Individual Users")}
+        </h1>
       </div>
 
-      {/* Table */}
       <UsersTable
         role={role}
         rows={users as BaseUser[]}
@@ -140,7 +113,7 @@ const UserTypesPage: React.FC = () => {
         onLimitChange={(n) => setLimit(n)}
         onPrev={() => setPage((p) => Math.max(1, p - 1))}
         onNext={() => setPage((p) => Math.min(totalPages, p + 1))}
-        onExportAll={exportAllToXlsx} 
+        onExportAll={exportAllToXlsx}
       />
     </div>
   );

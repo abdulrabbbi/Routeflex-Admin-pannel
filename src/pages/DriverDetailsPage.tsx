@@ -149,6 +149,25 @@ const DriverDetailsPage: React.FC = () => {
     });
   };
 
+
+    // Format a phone string like
+  // "PhoneNumber(countryISOCode: GB, countryCode: +44, number: 07543410710)"
+  // into "+44 07543410710 (GB)"
+
+  function formatPhone(phoneStr: string | null | undefined): string {
+    if (!phoneStr) return "—";
+
+    const regex =
+      /countryISOCode:\s*([A-Z]{2}),\s*countryCode:\s*([+\d]+),\s*number:\s*(\d+)/;
+
+    const match = phoneStr.match(regex);
+    if (!match) return phoneStr; // fallback if it doesn't match pattern
+
+    const [, countryISO, countryCode, number] = match;
+    return `${countryCode} ${number} (${countryISO})`;
+  }
+
+
   if (loading)
     return (
       <div className="max-w-6xl mx-auto p-6 space-y-6">
@@ -333,7 +352,7 @@ const DriverDetailsPage: React.FC = () => {
                   <span className="text-[#22c55e]">📞</span>
                   <div>
                     <p className="text-sm text-gray-600">Phone</p>
-                    <p className="font-medium">{driver.user.phone}</p>
+                    <p className="font-medium">{formatPhone(driver.user.phone)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">

@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
 import { approveJob, getJobById, rejectJob } from "../../api/jobs";
 import { toast } from "react-toastify";
 import { MdCheck, MdClose } from "react-icons/md";
-import { FaArrowLeft } from "react-icons/fa";
+import { IoClose } from "react-icons/io5";
 
 type Job = any;
 
@@ -22,6 +21,7 @@ const Pill = ({
     indigo: "bg-indigo-100 text-indigo-700",
     gray: "bg-gray-100 text-gray-700",
   } as const;
+
   return (
     <span
       className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold ${map[color]}`}
@@ -40,36 +40,38 @@ const fmtGBP = (n?: number) =>
       }).format(n)
     : "—";
 
-export default function OrderDetail() {
-  const { id } = useParams();
-  const navigate = useNavigate();
+type OrderDetailProps = {
+  open: boolean;
+  onClose: () => void;
+  orderId: string;
+};
 
+export default function OrderDetail({ open, onClose, orderId }: OrderDetailProps) {
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // fetch
   useEffect(() => {
+    if (!open) return;
     let cancelled = false;
+
     (async () => {
       try {
         setLoading(true);
-        const data = await getJobById(id!);
-        // Accept either {data:{job}} or plain job
-        const j = data;
-        if (!cancelled) setJob(j);
+        const data = await getJobById(orderId);
+        if (!cancelled) setJob(data);
       } catch (e: any) {
         toast.error(e?.response?.data?.message || "Failed to load order");
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [orderId, open]);
 
-  const r = job?.route || {};
-
+  const r = useMemo(() => job?.route || {}, [job]);
   const canApproveReject =
     job?.approvalStatus === "pending" && job?.status === "available";
 
@@ -121,9 +123,9 @@ export default function OrderDetail() {
       return toast.error("This order is not eligible to approve.");
     const t = toast.loading("Approving…");
     try {
-      await approveJob(id!);
+      await approveJob(orderId);
       toast.success("Approved");
-      navigate(-1);
+      onClose();
     } catch (e: any) {
       toast.error(e?.response?.data?.message || "Approve failed");
     } finally {
@@ -137,9 +139,9 @@ export default function OrderDetail() {
     const reason = window.prompt("Reason (optional):") || undefined;
     const t = toast.loading("Rejecting…");
     try {
-      await rejectJob(id!, reason);
+      await rejectJob(orderId, reason);
       toast.success("Rejected");
-      navigate(-1);
+      onClose();
     } catch (e: any) {
       toast.error(e?.response?.data?.message || "Reject failed");
     } finally {
@@ -147,193 +149,116 @@ export default function OrderDetail() {
     }
   };
 
+  if (!open) return null;
+
   return (
-    <div className="p-4 md:p-6">
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 rounded-full hover:bg-[#dcfce7] transition-colors"
-          aria-label="Go back"
-        >
-          <FaArrowLeft className="w-5 h-5 text-[#22c55e]" />
-        </button>
-        <h1 className="text-xl md:text-2xl font-semibold ml-2">Order Detail</h1>
-      </div>
+    <div className="fixed inset-0 z-[999]">
+      {/* Overlay */}
+      <div
+        className="absolute inset-0 bg-black/40"
+        onClick={onClose}
+      ></div>
 
-      {loading && <div className="animate-pulse h-32 rounded-xl bg-gray-100" />}
-      {!loading && !job && <div className="text-gray-600">Not found.</div>}
-
-      {!loading && job && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Main card */}
-          <div className="bg-white rounded-2xl border p-4 lg:col-span-2">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold">Route</h2>
-              {statusChip}
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-3 text-sm">
-              <div>
-                <span className="text-gray-500">Order ID</span>
-                <div className="font-medium break-all">{job._id}</div>
-              </div>
-
-              <div>
-                <span className="text-gray-500">Approval</span>
-                <div className="font-medium capitalize">
-                  {job.approvalStatus || "—"}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-gray-500">Pickup</span>
-                <div className="font-medium">
-                  {fmtDT(r?.pickupTime || job?.createdAt)}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-gray-500">Delivery</span>
-                <div className="font-medium">{fmtDT(r?.deliveryTime)}</div>
-              </div>
-
-              <div>
-                <span className="text-gray-500">From</span>
-                <div className="font-medium">
-                  {r?.startAddress
-                    ? `${r.startAddress.street}, ${r.startAddress.city}, ${r.startAddress.postCode}, ${r.startAddress.country}`
-                    : "—"}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-gray-500">Stops</span>
-                <div className="font-medium">
-                  {r?.endLocations?.length || 0}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-gray-500">Category</span>
-                <div className="font-medium">
-                  {r?.business ? "Business" : "Individual"}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-gray-500">Price</span>
-                <div className="font-medium">{fmtGBP(r?.price)}</div>
-              </div>
-
-              {job.approvalStatus === "approved" && (
-                <>
-                  <div>
-                    <span className="text-gray-500">Approved At</span>
-                    <div className="font-medium">{fmtDT(job.approvedAt)}</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Approved By</span>
-                    <div className="font-medium">{job.approvedBy || "—"}</div>
-                  </div>
-                </>
-              )}
-
-              {job.approvalStatus === "rejected" && (
-                <>
-                  <div>
-                    <span className="text-gray-500">Rejected At</span>
-                    <div className="font-medium">{fmtDT(job.rejectedAt)}</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Reason</span>
-                    <div className="font-medium">
-                      {job.rejectionReason || "—"}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {job.status === "cancelled" && (
-                <div className="sm:col-span-2">
-                  <span className="text-gray-500">Cancellation Reason</span>
-                  <div className="font-medium">
-                    {job.cancellationReason || "—"}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Destinations */}
-            <div className="mt-6">
-              <h3 className="font-semibold mb-2">Destinations</h3>
-              <div className="space-y-2">
-                {(r?.endLocations || []).map((e: any, i: number) => (
-                  <div
-                    key={i}
-                    className="p-3 rounded-xl border bg-gray-50 text-sm"
-                  >
-                    <div className="font-medium">
-                      {e.formattedAddress || "—"}
-                    </div>
-                    <div className="text-gray-600">
-                      ~ {e.distanceText || "—"} • {e.durationText || "—"}
-                    </div>
-                    {e.description ? (
-                      <div className="text-gray-600">{e.description}</div>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Side card */}
-          <div className="bg-white rounded-2xl border p-4 h-max">
-            <h2 className="font-semibold mb-3">Actions</h2>
-
-            {canApproveReject ? (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={reject}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100"
-                >
-                  <MdClose /> Reject
-                </button>
-                <button
-                  onClick={approve}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 text-white hover:bg-green-700"
-                >
-                  <MdCheck /> Approve
-                </button>
-              </div>
-            ) : (
-              <div className="text-sm text-gray-600">
-                No actions available for this order. Status: {statusChip}
-              </div>
-            )}
-
-            {/* Placed By */}
-            <div className="mt-6">
-              <h3 className="font-semibold mb-2">Placed By</h3>
-              <div className="text-sm">
-                <div className="font-medium">
-                  {placedBy?.name}{" "}
-                  <span className="ml-2">
-                    <Pill
-                      color={placedBy?.type === "Business" ? "green" : "yellow"}
-                    >
-                      {placedBy?.type}
-                    </Pill>
-                  </span>
-                </div>
-                <div className="text-gray-600">{placedBy?.email}</div>
-                <div className="text-gray-600">{placedBy?.phone}</div>
-              </div>
-            </div>
-          </div>
+      {/* Drawer */}
+      <div className="absolute right-0 top-0 h-full w-full max-w-[720px] bg-white shadow-2xl rounded-l-2xl overflow-y-auto transition-transform duration-300 ease-in-out">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b px-6 py-4 sticky top-0 bg-white z-10">
+          <h2 className="text-lg font-semibold text-gray-800">Order Details</h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-full"
+          >
+            <IoClose size={20} />
+          </button>
         </div>
-      )}
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {loading ? (
+            <div className="text-center text-gray-500">Loading...</div>
+          ) : job ? (
+            <>
+              {/* Main Info */}
+              <div className="border rounded-xl p-5 shadow-sm">
+                <h3 className="text-sm font-semibold text-gray-800 mb-3">
+                  Route Info
+                </h3>
+                <div className="grid grid-cols-2 gap-3 text-sm text-gray-700">
+                  <p><span className="font-medium">Order ID:</span> {job._id}</p>
+                  <p><span className="font-medium">Approval:</span> {job.approvalStatus}</p>
+                  <p><span className="font-medium">Pickup:</span> {fmtDT(r?.pickupTime || job?.createdAt)}</p>
+                  <p><span className="font-medium">Delivery:</span> {fmtDT(r?.deliveryTime)}</p>
+                  <p><span className="font-medium">From:</span> {r?.startAddress?.city || "—"}</p>
+                  <p><span className="font-medium">Stops:</span> {r?.endLocations?.length || 0}</p>
+                  <p><span className="font-medium">Category:</span> {r?.business ? "Business" : "Individual"}</p>
+                  <p><span className="font-medium">Price:</span> {fmtGBP(r?.price)}</p>
+                </div>
+              </div>
+
+              {/* Destinations */}
+              <div className="border rounded-xl p-5 shadow-sm">
+                <h3 className="text-sm font-semibold text-gray-800 mb-3">Destinations</h3>
+                <div className="space-y-2">
+                  {(r?.endLocations || []).map((e: any, i: number) => (
+                    <div key={i} className="p-3 rounded-xl border bg-gray-50 text-sm">
+                      <div className="font-medium">
+                        {e.formattedAddress || "—"}
+                      </div>
+                      <div className="text-gray-600">
+                        ~ {e.distanceText || "—"} • {e.durationText || "—"}
+                      </div>
+                      {e.description ? (
+                        <div className="text-gray-600">{e.description}</div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Placed By */}
+              <div className="border rounded-xl p-5 shadow-sm">
+                <h3 className="text-sm font-semibold text-gray-800 mb-3">
+                  Placed By
+                </h3>
+                <div className="text-sm">
+                  <div className="font-medium">
+                    {placedBy?.name}{" "}
+                    <span className="ml-2">
+                      <Pill
+                        color={placedBy?.type === "Business" ? "green" : "yellow"}
+                      >
+                        {placedBy?.type}
+                      </Pill>
+                    </span>
+                  </div>
+                  <div className="text-gray-600">{placedBy?.email}</div>
+                  <div className="text-gray-600">{placedBy?.phone}</div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              {canApproveReject && (
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
+                    onClick={reject}
+                  >
+                    <MdClose /> Reject
+                  </button>
+                  <button
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    onClick={approve}
+                  >
+                    <MdCheck /> Approve
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center text-gray-500">No order found.</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

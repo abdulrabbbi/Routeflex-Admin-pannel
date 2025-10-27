@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import {
   MdDashboard,
   MdPeople,
@@ -9,25 +10,82 @@ import {
   MdGroup,
   MdRateReview,
   MdStarRate,
-  MdMap,
+  MdBlockFlipped,
+  MdCheckCircle,
+  MdKeyboardArrowDown,
+  MdKeyboardArrowUp,
 } from "react-icons/md";
 import { IoClose } from "react-icons/io5";
 import { Link, useLocation } from "react-router-dom";
 import { Images } from "../assets/images";
 
-const menuItems = [
+type SidebarProps = {
+  isOpen: boolean;
+  setIsOpen: (value: boolean) => void;
+};
+
+type MenuItem = {
+  icon?: React.ElementType;
+  label?: string;
+  path?: string;
+  heading?: string;
+  items?: { icon: React.ElementType; label: string; path: string }[];
+};
+
+// all menu links
+const menuItems: MenuItem[] = [
   { icon: MdDashboard, label: "Dashboard", path: "/" },
-  { icon: MdAssignment, label: "Orders", path: "/orders" },
-  { icon: MdLocalShipping, label: "Orders History", path: "/parcel-tracking" },
-  { icon: MdGroup, label: "Customers", path: "/user-types" },
-  { icon: MdStarRate, label: "Reviews", path: "/ratings" },
-  { icon: MdPeople, label: "Driver Tracking", path: "/tracking" },
-  { icon: MdRateReview, label: "Feedback Inbox", path: "/feedbacks" },
-  { icon: MdPayment, label: "Payments", path: "/payments" },
+  {
+    heading: "Orders",
+    items: [
+      { icon: MdAssignment, label: "Orders", path: "/orders" },
+      { icon: MdAssignment, label: "Pending Order", path: "/pending-order" },
+      { icon: MdLocalShipping, label: "Assign to Driver", path: "/orders/assign" },
+      { icon: MdCheckCircle, label: "Completed", path: "/parcel-tracking/completed" },
+      { icon: MdBlockFlipped, label: "Cancelled Orders", path: "/parcel-tracking/cancelled" },
+    ],
+  },
+
+  {
+    heading: "Drivers",
+    items: [
+      { icon: MdPeople, label: "Drivers", path: "/tracking" },
+      { icon: MdRateReview, label: "Ratings ", path: "/ratings" },
+    ],
+  },
+  {
+    heading: "Users",
+    items: [
+      { icon: MdAssignment, label: "Individual", path: "/user-types/individual" },
+      { icon: MdAssignment, label: "Business", path: "/user-types/business" }
+    ],
+  },
+  {
+    heading: "Feedbacks",
+    items: [
+      { icon: MdStarRate, label: "FeedBacks", path: "/feedbacks" },
+    ],
+  },
+  {
+    heading: "Payments",
+    items: [
+      { icon: MdPayment, label: "Payments & Invoicing", path: "/payments" },
+    ],
+  },
+
+
 ];
 
-const LeftSidebar = ({ isOpen, setIsOpen }: any) => {
+const LeftSidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   const location = useLocation();
+  const [openDropdowns, setOpenDropdowns] = useState<{ [key: string]: boolean }>({});
+
+  const toggleDropdown = (heading: string) => {
+    setOpenDropdowns((prev) => ({
+      ...prev,
+      [heading]: !prev[heading],
+    }));
+  };
 
   return (
     <>
@@ -41,49 +99,87 @@ const LeftSidebar = ({ isOpen, setIsOpen }: any) => {
 
       {/* Sidebar */}
       <div
-        className={`
-          fixed lg:static inset-y-0 left-0 w-64 bg-white transform z-[1001]
+        className={`fixed lg:static inset-y-0 left-0 w-64 bg-white transform z-[1001]
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
           lg:translate-x-0 transition-transform duration-200 ease-in-out
-          flex flex-col border-r z-30
-        `}
+          flex flex-col border-r`}
       >
         {/* Logo */}
         <div className="h-16 flex items-center px-6 border-b">
-          <span className="text-xl font-bold">
-            {/* Road<span className="text-green-500">Fle</span> */}
-            <img src={Images.Logo} />
-          </span>
-          <button
-            className="ml-auto lg:hidden"
-            onClick={() => setIsOpen(false)}
-          >
+          <img src={Images.Logo} alt="Logo" className="h-8" />
+          <button className="ml-auto lg:hidden" onClick={() => setIsOpen(false)}>
             <IoClose size={24} />
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1 mt-3">
-          {menuItems.map((item) => {
-            const isActive = location.pathname === item.path; // Check if the path matches current URL
-
-            return (
-              <Link
-                key={item.label}
-                to={item.path}
-                className={`
-                  flex items-center px-3 py-3 rounded-xl text-sm font-medium
-                  ${
-                    isActive
+        <nav className="flex-1 px-3 py-4 mt-3 overflow-y-auto space-y-2">
+          {menuItems.map((item, index) => {
+            // Simple item (no sub-menu)
+            if (item.label && item.path) {
+              const Icon = item.icon!;
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={index}
+                  to={item.path}
+                  className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition 
+                    ${isActive
                       ? "bg-[#24123A0D] text-gray-900"
                       : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                  }
-                `}
-              >
-                <item.icon className="h-6 w-6 mr-3" />
-                {item.label}
-              </Link>
-            );
+                    }`}
+                >
+                  <Icon className="h-5 w-5 mr-3 text-green-600" />
+                  {item.label}
+                </Link>
+              );
+            }
+
+            // Dropdown item
+            if (item.heading && item.items) {
+              const isOpenDropdown = openDropdowns[item.heading];
+              return (
+                <div key={index}>
+                  <button
+                    onClick={() => toggleDropdown(item.heading!)}
+                    className="flex items-center justify-between w-full text-left px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 rounded-lg"
+                  >
+                    <span>{item.heading}</span>
+                    {isOpenDropdown ? (
+                      <MdKeyboardArrowUp className="text-gray-500" />
+                    ) : (
+                      <MdKeyboardArrowDown className="text-gray-500" />
+                    )}
+                  </button>
+
+                  {/* Dropdown content */}
+                  {isOpenDropdown && (
+                    <ul className="space-y-1 ml-5 mt-1">
+                      {item.items.map((subItem, subIndex) => {
+                        const isActive = location.pathname === subItem.path;
+                        return (
+                          <li key={subIndex}>
+                            <Link
+                              to={subItem.path}
+                              className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition 
+                                ${isActive
+                                  ? "bg-[#24123A0D] text-gray-900"
+                                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                                }`}
+                            >
+                              <subItem.icon className="h-5 w-5 mr-3 text-green-600" />
+                              {subItem.label}
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              );
+            }
+
+            return null;
           })}
         </nav>
 
@@ -99,10 +195,8 @@ const LeftSidebar = ({ isOpen, setIsOpen }: any) => {
           <Link
             to="/auth/login"
             onClick={() => {
-              localStorage.removeItem("token");
-              localStorage.removeItem("user");
-              sessionStorage.removeItem("token");
-              sessionStorage.removeItem("user");
+              localStorage.clear();
+              sessionStorage.clear();
             }}
             className="flex items-center px-3 py-3 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-50 hover:text-gray-900"
           >

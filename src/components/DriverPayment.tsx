@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { FiDownload, FiRefreshCcw, FiSearch, FiX } from "react-icons/fi";
-import { PaymentReport } from "../api/paymentService";
 import { toast } from "react-hot-toast";
+import { PaymentReport } from "../api/paymentService";
 
 type StatusFilter = "all" | "pending" | "received";
 
@@ -9,10 +9,8 @@ const EmptyTable = ({ message, colSpan = 5 }: { message: string; colSpan?: numbe
   <tbody>
     <tr>
       <td colSpan={colSpan} className="h-40">
-        <div className="flex h-full items-center justify-center">
-          <div className="text-center">
-            <div className="text-sm text-gray-500">{message}</div>
-          </div>
+        <div className="flex h-full items-center justify-center text-sm text-gray-500">
+          {message}
         </div>
       </td>
     </tr>
@@ -102,21 +100,24 @@ const DriversPaymentTable = ({
 }) => {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
+
   const canPrev = page > 1;
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    return (data || []).filter((row) => {
+    return data.filter((row) => {
       const byText =
         !term ||
         row.driver?.toLowerCase().includes(term) ||
         String(row.sequence ?? "").toLowerCase().includes(term);
+
       const byStatus =
         status === "all"
           ? true
           : status === "pending"
           ? String(row.paymentReceived).toLowerCase() === "pending"
           : String(row.paymentReceived).toLowerCase() === "received";
+
       return byText && byStatus;
     });
   }, [data, q, status]);
@@ -130,6 +131,7 @@ const DriversPaymentTable = ({
         r.deliveryStatus ?? "-",
         r.paymentReceived ?? "-",
       ]);
+
       const csv = [headers, ...rows]
         .map((r) =>
           r
@@ -141,6 +143,7 @@ const DriversPaymentTable = ({
             .join(",")
         )
         .join("\n");
+
       const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
       const a = document.createElement("a");
       const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
@@ -156,12 +159,13 @@ const DriversPaymentTable = ({
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
-      {/* Header (unchanged) */}
+      {/* Header */}
       <div className="p-6 border-b border-gray-100">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h2 className="text-lg font-semibold text-[#1e1e38]">Drivers to be Paid</h2>
 
           <div className="flex flex-wrap items-center gap-3">
+            {/* Search */}
             <div className="relative">
               <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
@@ -181,6 +185,7 @@ const DriversPaymentTable = ({
               )}
             </div>
 
+            {/* Status Filter */}
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as StatusFilter)}
@@ -191,6 +196,7 @@ const DriversPaymentTable = ({
               <option value="received">Received</option>
             </select>
 
+            {/* Rows */}
             <div className="flex items-center gap-2">
               <label className="text-sm text-gray-600">Rows:</label>
               <select
@@ -206,6 +212,7 @@ const DriversPaymentTable = ({
               </select>
             </div>
 
+            {/* Actions */}
             <button
               onClick={onRefresh}
               disabled={loading}
@@ -311,11 +318,11 @@ const DriversPaymentTable = ({
         </table>
       </div>
 
-      {/* Footer summary */}
+      {/* Footer */}
       <div className="px-6 py-4 text-xs text-gray-500 flex items-center justify-between">
         <span>
-          Showing <strong>{filtered.length}</strong> row(s){q ? " (filtered)" : ""} • Page{" "}
-          <strong>{page}</strong>
+          Showing <strong>{filtered.length}</strong> row(s)
+          {q ? " (filtered)" : ""} • Page <strong>{page}</strong>
         </span>
       </div>
     </div>

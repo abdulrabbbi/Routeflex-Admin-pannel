@@ -40,11 +40,10 @@ export const getParcelReports = async (params: GetParcelReportsParams = {}) => {
     },
   });
 
-  return response.data; 
+  return response.data;
 };
 
-
-export type Role = "individual" | "business" ;
+export type Role = "individual" | "business";
 
 export interface BaseUser {
   _id?: string;
@@ -136,15 +135,15 @@ export const getDriverTracking = async (driverTrackingId: string) => {
 export const getDeliveries = async (
   limit: number = 10,
   page: number = 1,
-  range: RangeFilter = "daily"
+  range: RangeFilter = "daily",
+  status?: "completed" | "cancelled"
 ): Promise<DeliveriesApiResponse> => {
   const { data } = await apiClient.get<DeliveriesApiResponse>(
     `/deliveries/deliveries`,
-    { params: { limit, page, range } }
+    { params: { limit, page, range, status } }
   );
   return data;
 };
-
 
 export const deleteDelivery = async (deliveryId: string) => {
   return await apiClient.delete(`/deliveries/${deliveryId}`);

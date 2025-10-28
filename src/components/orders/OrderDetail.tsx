@@ -35,9 +35,9 @@ const fmtDT = (v?: string) => (v ? new Date(v).toLocaleString() : "—");
 const fmtGBP = (n?: number) =>
   typeof n === "number"
     ? new Intl.NumberFormat("en-GB", {
-        style: "currency",
-        currency: "GBP",
-      }).format(n)
+      style: "currency",
+      currency: "GBP",
+    }).format(n)
     : "—";
 
 type OrderDetailProps = {
@@ -57,8 +57,8 @@ export default function OrderDetail({ open, onClose, orderId }: OrderDetailProps
     (async () => {
       try {
         setLoading(true);
-        const data = await getJobById(orderId);
-        if (!cancelled) setJob(data);
+        const res = await getJobById(orderId);
+        if (!cancelled) setJob(res);
       } catch (e: any) {
         toast.error(e?.response?.data?.message || "Failed to load order");
       } finally {
@@ -71,9 +71,7 @@ export default function OrderDetail({ open, onClose, orderId }: OrderDetailProps
     };
   }, [orderId, open]);
 
-  const r = useMemo(() => job?.route || {}, [job]);
-  const canApproveReject =
-    job?.approvalStatus === "pending" && job?.status === "available";
+  const r = job?.route || {};
 
   const statusChip = useMemo(() => {
     if (!job) return null;
@@ -82,92 +80,23 @@ export default function OrderDetail({ open, onClose, orderId }: OrderDetailProps
       return <Pill color="red">Rejected</Pill>;
     if (job.approvalStatus === "approved")
       return <Pill color="green">Approved</Pill>;
-    if (job.approvalStatus === "pending" && job.status !== "available")
+    if (job.approvalStatus === "pending")
       return <Pill color="yellow">Pending</Pill>;
-
-    switch (job.status) {
-      case "accepted":
-        return <Pill color="blue">Accepted</Pill>;
-      case "in-progress":
-        return <Pill color="indigo">In-progress</Pill>;
-      case "completed":
-        return <Pill color="green">Completed</Pill>;
-      default:
-        return <Pill color="gray">{job.status || "—"}</Pill>;
-    }
+    return <Pill color="gray">{job.status || "—"}</Pill>;
   }, [job]);
 
-  const placedBy = useMemo(() => {
-    if (!r) return null;
-    if (r.business) {
-      return {
-        type: "Business",
-        name: r.business?.name || r.business?.businessName || "Business User",
-        email: r.business?.email || "—",
-        phone: r.business?.phone || "—",
-      };
-    }
-    const g = r.guestDetails || {};
-    const name =
-      [g.firstName, g.lastName].filter(Boolean).join(" ") || "Guest User";
-    return {
-      type: "Individual",
-      name,
-      email: g.email || "—",
-      phone: g.phone || "—",
-    };
-  }, [r]);
-
-  const approve = async () => {
-    if (!canApproveReject)
-      return toast.error("This order is not eligible to approve.");
-    const t = toast.loading("Approving…");
-    try {
-      await approveJob(orderId);
-      toast.success("Approved");
-      onClose();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message || "Approve failed");
-    } finally {
-      toast.dismiss(t);
-    }
-  };
-
-  const reject = async () => {
-    if (!canApproveReject)
-      return toast.error("This order is not eligible to reject.");
-    const reason = window.prompt("Reason (optional):") || undefined;
-    const t = toast.loading("Rejecting…");
-    try {
-      await rejectJob(orderId, reason);
-      toast.success("Rejected");
-      onClose();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message || "Reject failed");
-    } finally {
-      toast.dismiss(t);
-    }
-  };
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-[999]">
-      {/* Overlay */}
-      <div
-        className="absolute inset-0 bg-black/40"
-        onClick={onClose}
-      ></div>
+      <div className="absolute inset-0 bg-black/40" onClick={onClose}></div>
 
-      {/* Drawer */}
-      <div className="absolute right-0 top-0 h-full w-full max-w-[720px] bg-white shadow-2xl rounded-l-2xl overflow-y-auto transition-transform duration-300 ease-in-out">
+      <div className="absolute right-0 top-0 h-full w-full max-w-[720px] bg-white shadow-2xl rounded-l-2xl overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between border-b px-6 py-4 sticky top-0 bg-white z-10">
           <h2 className="text-lg font-semibold text-gray-800">Order Details</h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
             <IoClose size={20} />
           </button>
         </div>
@@ -176,86 +105,110 @@ export default function OrderDetail({ open, onClose, orderId }: OrderDetailProps
         <div className="p-6 space-y-6">
           {loading ? (
             <div className="text-center text-gray-500">Loading...</div>
-          ) : job ? (
+          ) : !job ? (
+            <div className="text-center text-gray-500">No order found.</div>
+          ) : (
             <>
-              {/* Main Info */}
-              <div className="border rounded-xl p-5 shadow-sm">
-                <h3 className="text-sm font-semibold text-gray-800 mb-3">
-                  Route Info
-                </h3>
+              {/* --- General Info --- */}
+              <div className="border rounded-xl p-5 shadow-sm space-y-3">
+                <h3 className="text-sm font-semibold text-gray-800 mb-2">General Info</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm text-gray-700">
-                  <p><span className="font-medium">Order ID:</span> {job._id}</p>
+                  <p><span className="font-medium">Job ID:</span> {job._id}</p>
+                  <p><span className="font-medium">Status:</span> {statusChip}</p>
                   <p><span className="font-medium">Approval:</span> {job.approvalStatus}</p>
-                  <p><span className="font-medium">Pickup:</span> {fmtDT(r?.pickupTime || job?.createdAt)}</p>
-                  <p><span className="font-medium">Delivery:</span> {fmtDT(r?.deliveryTime)}</p>
-                  <p><span className="font-medium">From:</span> {r?.startAddress?.city || "—"}</p>
-                  <p><span className="font-medium">Stops:</span> {r?.endLocations?.length || 0}</p>
-                  <p><span className="font-medium">Category:</span> {r?.business ? "Business" : "Individual"}</p>
-                  <p><span className="font-medium">Price:</span> {fmtGBP(r?.price)}</p>
+                  <p><span className="font-medium">Approved By:</span> {job.approvedBy || "—"}</p>
+                  <p><span className="font-medium">Approved At:</span> {fmtDT(job.approvedAt)}</p>
+                  <p><span className="font-medium">Created At:</span> {fmtDT(job.createdAt)}</p>
+                  <p><span className="font-medium">Updated At:</span> {fmtDT(job.updatedAt)}</p>
                 </div>
               </div>
 
-              {/* Destinations */}
-              <div className="border rounded-xl p-5 shadow-sm">
-                <h3 className="text-sm font-semibold text-gray-800 mb-3">Destinations</h3>
-                <div className="space-y-2">
-                  {(r?.endLocations || []).map((e: any, i: number) => (
-                    <div key={i} className="p-3 rounded-xl border bg-gray-50 text-sm">
-                      <div className="font-medium">
-                        {e.formattedAddress || "—"}
-                      </div>
-                      <div className="text-gray-600">
-                        ~ {e.distanceText || "—"} • {e.durationText || "—"}
-                      </div>
-                      {e.description ? (
-                        <div className="text-gray-600">{e.description}</div>
-                      ) : null}
-                    </div>
-                  ))}
+              {/* --- Route Info --- */}
+              <div className="border rounded-xl p-5 shadow-sm space-y-3">
+                <h3 className="text-sm font-semibold text-gray-800 mb-2">Route Info</h3>
+                <div className="grid grid-cols-2 gap-3 text-sm text-gray-700">
+                  <p><span className="font-medium">Start City:</span> {r.startAddress?.city}</p>
+                  <p><span className="font-medium">Start Street:</span> {r.startAddress?.street}</p>
+                  <p><span className="font-medium">Postcode:</span> {r.startAddress?.postCode}</p>
+                  <p><span className="font-medium">Country:</span> {r.startAddress?.country}</p>
+                  <p><span className="font-medium">Pickup Time:</span> {fmtDT(r.pickupTime)}</p>
+                  <p><span className="font-medium">Delivery Time:</span> {fmtDT(r.deliveryTime)}</p>
+                  <p><span className="font-medium">Distance:</span> {r.distanceText || `${(r.distanceValue / 1000).toFixed(1)} km`}</p>
+                  <p><span className="font-medium">Price:</span> {fmtGBP(r.price)}</p>
+                  <p><span className="font-medium">Description:</span> {r.startDescription || "—"}</p>
                 </div>
               </div>
 
-              {/* Placed By */}
-              <div className="border rounded-xl p-5 shadow-sm">
-                <h3 className="text-sm font-semibold text-gray-800 mb-3">
-                  Placed By
-                </h3>
-                <div className="text-sm">
-                  <div className="font-medium">
-                    {placedBy?.name}{" "}
-                    <span className="ml-2">
-                      <Pill
-                        color={placedBy?.type === "Business" ? "green" : "yellow"}
-                      >
-                        {placedBy?.type}
-                      </Pill>
-                    </span>
+              {/* --- End Locations --- */}
+              <div className="border rounded-xl p-5 shadow-sm space-y-3">
+                <h3 className="text-sm font-semibold text-gray-800 mb-2">End Locations</h3>
+                {(r.endLocations || []).map((loc: any, i: number) => (
+                  <div key={i} className="border p-3 rounded-md bg-gray-50 text-sm">
+                    <p className="font-medium">{loc.formattedAddress}</p>
+                    <p>Distance: {loc.distanceText}</p>
+                    <p>Duration: {loc.durationText}</p>
+                    <p>Description: {loc.description}</p>
+                    <p>Received: {loc.Recieved ? "Yes" : "No"}</p>
                   </div>
-                  <div className="text-gray-600">{placedBy?.email}</div>
-                  <div className="text-gray-600">{placedBy?.phone}</div>
+                ))}
+              </div>
+
+              {/* --- Package Details --- */}
+              <div className="border rounded-xl p-5 shadow-sm space-y-3">
+                <h3 className="text-sm font-semibold text-gray-800 mb-2">Package Details</h3>
+                <div className="grid grid-cols-2 gap-3 text-sm text-gray-700">
+                  <p><span className="font-medium">Type:</span> {r.packageType}</p>
+                  <p><span className="font-medium">Category:</span> {r.packageCategory}</p>
+                  <p><span className="font-medium">Size:</span> {r.packageSize}</p>
+                  <p><span className="font-medium">Weight:</span> {r.packageWeight} kg</p>
+                  <p><span className="font-medium">Is Emergency:</span> {r.isEmergency ? "Yes" : "No"}</p>
                 </div>
               </div>
 
-              {/* Actions */}
-              {canApproveReject && (
-                <div className="flex justify-end gap-3 pt-2">
-                  <button
-                    className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
-                    onClick={reject}
-                  >
-                    <MdClose /> Reject
-                  </button>
-                  <button
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                    onClick={approve}
-                  >
-                    <MdCheck /> Approve
-                  </button>
+              {/* --- Vehicle Info --- */}
+              <div className="border rounded-xl p-5 shadow-sm space-y-3">
+                <h3 className="text-sm font-semibold text-gray-800 mb-2">Vehicle Info</h3>
+                <div className="text-sm text-gray-700">
+                  <p><span className="font-medium">Vehicle Type:</span> {r.vehicleType}</p>
+                </div>
+              </div>
+
+              {/* --- Business Info --- */}
+              {r.business && (
+                <div className="border rounded-xl p-5 shadow-sm space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-800 mb-2">
+                    Business Info
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm text-gray-700">
+                    <p>
+                      <span className="font-medium">Business Name:</span>{" "}
+                      {r.business?.name || r.business?.businessName || "Business User"}
+                    </p>
+                    <p>
+                      <span className="font-medium">Business ID:</span>{" "}
+                      {r.business?._id || "—"}
+                    </p>
+                    <p>
+                      <span className="font-medium">Email:</span>{" "}
+                      {r.business?.email || "—"}
+                    </p>
+                    <p>
+                      <span className="font-medium">Phone:</span>{" "}
+                      {r.business?.phone || "—"}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+
+              {/* --- QR Code --- */}
+              {r.qrCode && (
+                <div className="border rounded-xl p-5 shadow-sm">
+                  <h3 className="text-sm font-semibold text-gray-800 mb-2">QR Code</h3>
+                  <img src={r.qrCode} alt="QR Code" className="w-40 h-40 object-contain" />
                 </div>
               )}
             </>
-          ) : (
-            <div className="text-center text-gray-500">No order found.</div>
           )}
         </div>
       </div>

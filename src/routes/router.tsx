@@ -1,103 +1,220 @@
-import { createBrowserRouter, Outlet } from "react-router-dom";
-import ProtectedRoute from "../middlewares/ProtectedRoute";
-import DashboardLayout from "../layouts/SiteLayout";
-import DashboardContent from "../pages/MainDashboard";
-import TrackingPage from "../pages/TrackingPage";
-import PaymentsPage from "../pages/PaymentPage";
-import ParcelTrackingPage from "../pages/ParcelTrackingPage";
-import LoginPage from "../pages/Auth/Login";
-import SettingsPage from "../pages/Settings";
-import DriverDetailsPage from "../pages/DriverDetailsPage";
+import React, { Suspense } from "react";
+import { createBrowserRouter, Outlet, Link } from "react-router-dom";
 
-import FeedbackAdminPage from "../pages/FeedbackAdminPage";
-import RatingsAdminPage from "../pages/RatingsAdminPage";
-import RatingDetailsPage from "../pages/RatingDetailsPage";
-import OrdersPage from "../pages/OrdersPage";
-// import OrderDetail from "../components/orders/OrderDetail";
-import JobAssignmentPage from "../components/orders/JobAssignmentPage";
-import CancelledDeliveries from "../components/deliveries/CancelledDeliveries";
-import CompletedDeliveries from "../components/deliveries/CompletedDeliveries";
-import UserTypesPage from "../pages/UserTypesPage";
-import IndividualUsersPage from "../components/users/IndividualUserPage";
-import BusinessUsersPage from "../components/users/BusinessUserPage";
-import PendingOrder from "../components/orders/PendingOrder";
-import ProgressOrder from "../components/orders/ProgressOrder";
-import DriverProfile from "../pages/DriverProfile";
-import PendingDriversTable from "../components/drivers/PendingDriverTable";
-import BannedDriversTable from "../components/drivers/BannedDriversTable";
+// Lightweight fallback while chunks load
+const RouteFallback = () => (
+  <div className="min-h-[40vh] grid place-items-center p-6">
+    <div className="text-center text-gray-600">Loading…</div>
+  </div>
+);
 
-
+// 404 that uses <Link> (no full reload)
 const ErrorFallback = () => (
   <div className="min-h-screen grid place-items-center p-6">
     <div className="max-w-md text-center space-y-3">
       <h1 className="text-2xl font-bold">Page not found</h1>
-      <p className="text-gray-600">
-        The page you requested doesn't exist or has moved.
-      </p>
-      <a
-        href="/"
+      <p className="text-gray-600">The page you requested doesn't exist or has moved.</p>
+      <Link
+        to="/"
         className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
       >
         Go to Dashboard
-      </a>
+      </Link>
     </div>
   </div>
 );
 
+// Wrap any element branch with Suspense
+const withSuspense = (node: React.ReactNode) => (
+  <Suspense fallback={<RouteFallback />}>{node}</Suspense>
+);
+
 const Router = () =>
   createBrowserRouter([
+    // ======= PROTECTED APP =======
     {
       path: "/",
-      element: <ProtectedRoute />,
+      // Lazy-load the auth guard itself
+      lazy: async () => {
+        const { default: ProtectedRoute } = await import("../middlewares/ProtectedRoute");
+        return {
+          Component: ({ children }: { children?: React.ReactNode }) =>
+            withSuspense(React.createElement(ProtectedRoute as any, null, children)),
+        };
+      },
       children: [
         {
-          element: <DashboardLayout />,
+          // App shell/layout — keep light; it’s lazy too
+          element: withSuspense(React.createElement(React.lazy(() => import("../layouts/SiteLayout")))),
           errorElement: <ErrorFallback />,
           children: [
-            { index: true, element: <DashboardContent /> },
-            { path: "tracking", element: <TrackingPage /> },
-            { path: "tracking/driver/:id", element: <DriverDetailsPage /> },
-            { path: "pending-drivers", element: <PendingDriversTable /> },
-            { path: "banned-drivers", element: <BannedDriversTable /> },
-            { path: "parcel-tracking", element: <ParcelTrackingPage /> },
-            { path: "parcel-tracking/completed", element: <CompletedDeliveries /> },
-            { path: "parcel-tracking/cancelled", element: <CancelledDeliveries /> },
-            { path: "tracking/driver/:id/profile/overview", element: <DriverProfile /> },
-            // orders
-            { path: "orders", element: <OrdersPage /> },
-            { path: "pending-assignments", element: <PendingOrder /> },
-            { path: "ongoing-order", element: <ProgressOrder /> },
-            // { path: "orders/:id", element: <OrderDetail /> },
+            // Dashboard (index)
+            {
+              index: true,
+              lazy: async () => ({
+                Component: (await import("../pages/MainDashboard")).default,
+              }),
+            },
 
+            // Tracking
+            {
+              path: "tracking",
+              lazy: async () => ({
+                Component: (await import("../pages/TrackingPage")).default,
+              }),
+            },
+            {
+              path: "tracking/driver/:id",
+              lazy: async () => ({
+                Component: (await import("../pages/DriverDetailsPage")).default,
+              }),
+            },
+            {
+              path: "tracking/driver/:id/profile/overview",
+              lazy: async () => ({
+                Component: (await import("../pages/DriverProfile")).default,
+              }),
+            },
 
+            // Drivers admin
+            {
+              path: "pending-drivers",
+              lazy: async () => ({
+                Component: (await import("../components/drivers/PendingDriverTable")).default,
+              }),
+            },
+            {
+              path: "banned-drivers",
+              lazy: async () => ({
+                Component: (await import("../components/drivers/BannedDriversTable")).default,
+              }),
+            },
 
+            // Parcel tracking + subroutes
+            {
+              path: "parcel-tracking",
+              lazy: async () => ({
+                Component: (await import("../pages/ParcelTrackingPage")).default,
+              }),
+            },
+            {
+              path: "parcel-tracking/completed",
+              lazy: async () => ({
+                Component: (await import("../components/deliveries/CompletedDeliveries")).default,
+              }),
+            },
+            {
+              path: "parcel-tracking/cancelled",
+              lazy: async () => ({
+                Component: (await import("../components/deliveries/CancelledDeliveries")).default,
+              }),
+            },
 
-            { path: "orders/assign", element: <JobAssignmentPage /> },
+            // Orders
+            {
+              path: "orders",
+              lazy: async () => ({
+                Component: (await import("../pages/OrdersPage")).default,
+              }),
+            },
+            {
+              path: "pending-assignments",
+              lazy: async () => ({
+                Component: (await import("../components/orders/PendingOrder")).default,
+              }),
+            },
+            {
+              path: "ongoing-order",
+              lazy: async () => ({
+                Component: (await import("../components/orders/ProgressOrder")).default,
+              }),
+            },
+            {
+              path: "orders/assign",
+              lazy: async () => ({
+                Component: (await import("../components/orders/JobAssignmentPage")).default,
+              }),
+            },
+
+            // User types (pass props to lazy component)
             {
               path: "user-types/individual",
-              element: <UserTypesPage role="individual" title="Individual Users" />,
+              lazy: async () => {
+                const mod = await import("../pages/UserTypesPage");
+                const Page = mod.default;
+                return {
+                  Component: () => <Page role="individual" title="Individual Users" />,
+                };
+              },
             },
             {
               path: "user-types/business",
-              element: <UserTypesPage role="business" title="Business Users" />,
+              lazy: async () => {
+                const mod = await import("../pages/UserTypesPage");
+                const Page = mod.default;
+                return {
+                  Component: () => <Page role="business" title="Business Users" />,
+                };
+              },
             },
 
-            { path: "feedbacks", element: <FeedbackAdminPage /> },
-            { path: "ratings", element: <RatingsAdminPage /> },
-            { path: "ratings/:id", element: <RatingDetailsPage /> },
-            { path: "payments", element: <PaymentsPage /> },
-            { path: "settings", element: <SettingsPage /> },
+            // Feedback & ratings
+            {
+              path: "feedbacks",
+              lazy: async () => ({
+                Component: (await import("../pages/FeedbackAdminPage")).default,
+              }),
+            },
+            {
+              path: "ratings",
+              lazy: async () => ({
+                Component: (await import("../pages/RatingsAdminPage")).default,
+              }),
+            },
+            {
+              path: "ratings/:id",
+              lazy: async () => ({
+                Component: (await import("../pages/RatingDetailsPage")).default,
+              }),
+            },
+
+            // Payments & settings
+            {
+              path: "payments",
+              lazy: async () => ({
+                Component: (await import("../pages/PaymentPage")).default,
+              }),
+            },
+            {
+              path: "settings",
+              lazy: async () => ({
+                Component: (await import("../pages/Settings")).default,
+              }),
+            },
+
+            // Catch-all inside the shell
+            { path: "*", element: <ErrorFallback /> },
           ],
         },
       ],
     },
 
-    // 🔓 public auth branch
+    // ======= PUBLIC AUTH =======
     {
       path: "/auth",
-      element: <Outlet />,
-      children: [{ path: "login", element: <LoginPage /> }],
+      element: withSuspense(<Outlet />),
+      children: [
+        {
+          path: "login",
+          lazy: async () => ({
+            Component: (await import("../pages/Auth/Login")).default,
+          }),
+        },
+      ],
     },
+
+    // ======= GLOBAL CATCH-ALL =======
+    { path: "*", element: <ErrorFallback /> },
   ]);
 
 export default Router;

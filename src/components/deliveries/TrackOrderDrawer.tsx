@@ -9,6 +9,7 @@ import { getTrackOrder } from "../../api/deliveryService";
 import { TrackOrderResponse } from "../../types/deliveries";
 import { getSignedUrl, s3UrlToKey } from "../../utils/s3";
 import { getImageUrl } from "../../utils/getImageUrl";
+import OrderDetail from "../orders/OrderDetail";
 
 // Cache for signed S3 images
 const signedPhotoCache = new Map<string, string>();
@@ -92,7 +93,13 @@ export const TrackOrderDrawer: React.FC<{
 }> = ({ open, onClose, deliveryId }) => {
   const [loading, setLoading] = useState(false);
   const [payload, setPayload] = useState<TrackOrderResponse["data"] | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
+  const openDrawer = (orderId: string) => {
+    setSelectedOrderId(orderId);
+    setDrawerOpen(true);
+  };
   // Fetch order details
   useEffect(() => {
     let active = true;
@@ -191,7 +198,7 @@ export const TrackOrderDrawer: React.FC<{
               </p>
               <p className="text-gray-600 text-sm">{payload.driver?.email}</p>
               <p className="text-gray-500 text-sm">{formatPhone(payload.driver?.phone)}</p>
-                <Link className="bg-indigo-100 px-2 py-1 mt-2 font-semibold rounded-full text-sm text-indigo-500  " to={`/tracking/driver/${payload.driver?._id}`}>View Detail</Link>
+              <Link className="bg-indigo-100 px-2 py-1 mt-2 font-semibold rounded-full text-sm text-indigo-500  " to={`/tracking/driver/${payload.driver?._id}/profile/overview`}>View Detail</Link>
 
 
             </div>
@@ -214,7 +221,7 @@ export const TrackOrderDrawer: React.FC<{
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Order #</p>
-                    <Link to={`/orders/${payload.delivery?.job}`} title={`/orders/${payload.delivery?.job}`} className="text-base font-bold">{payload.delivery?.job}</Link>
+                    <p onClick={() => openDrawer(payload.delivery?.job)} className="text-base font-bold">{payload.delivery?.job}</p>
                     <p className="mt-2 text-sm text-gray-600">
                       Picked by: <strong>{payload.parcelPickedBy}</strong>
                     </p>
@@ -361,6 +368,14 @@ export const TrackOrderDrawer: React.FC<{
           </div>
         )}
       </div>
+      {/* Drawer (like TrackOrderDrawer) */}
+      {selectedOrderId && (
+        <OrderDetail
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          orderId={selectedOrderId}
+        />
+      )}
     </div>
   );
 };

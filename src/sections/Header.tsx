@@ -104,16 +104,29 @@ const Header = ({ onMenuClick }: any) => {
   }, [user?.profilePicture]);
 
   // Map routes to labels
-  const routeNames: Record<string, string> = {
-    "/": "Dashboard",
-    "/tracking": "Driver Tracking",
-    "/parcel-tracking": "Parcel Tracking",
-    "/route-listing": "Route Listing",
-    "/payments": "Payment",
-    "/settings": "Settings",
-    "/user-types": "Users",
-  };
-  const pageName = routeNames[location.pathname] || "Dashboard";
+  // Inside Header component, replace this:
+const routeNames: Record<string, string> = {
+  "/": "Dashboard",
+  "/tracking": "Driver Tracking",
+  "/parcel-tracking": "Parcel Tracking",
+  "/route-listing": "Route Listing",
+  "/payments": "Payment",
+  "/settings": "Settings",
+  "/user-types": "Users",
+};
+
+// New logic for dynamic route matching
+let pageName = "Dashboard";
+
+// Match driver profile overview with dynamic ID
+if (
+  location.pathname.startsWith("/tracking/driver/") &&
+  location.pathname.endsWith("/profile/overview")
+) {
+  pageName = "Driver Profile";
+} else {
+  pageName = routeNames[location.pathname] || "Dashboard";
+}
 
   return (
     <header className="h-16 border-b bg-white relative">

@@ -39,7 +39,8 @@ const menuItems: MenuItem[] = [
     heading: "Orders",
     items: [
       { icon: MdAssignment, label: "Orders", path: "/orders" },
-      { icon: MdAssignment, label: "Pending Order", path: "/pending-order" },
+      { icon: MdAssignment, label: "Pending Assignments", path: "/pending-assignments" },
+      { icon: MdAssignment, label: "Ongoing Order", path: "/ongoing-order" },
       { icon: MdLocalShipping, label: "Assign to Driver", path: "/orders/assign" },
       { icon: MdCheckCircle, label: "Completed", path: "/parcel-tracking/completed" },
       { icon: MdBlockFlipped, label: "Cancelled Orders", path: "/parcel-tracking/cancelled" },
@@ -50,6 +51,8 @@ const menuItems: MenuItem[] = [
     heading: "Drivers",
     items: [
       { icon: MdPeople, label: "Drivers", path: "/tracking" },
+      { icon: MdAssignment, label: "Pending Driver", path: "/pending-drivers" },
+      { icon: MdBlockFlipped, label: "Banned Driver", path: "/banned-drivers" },
       { icon: MdRateReview, label: "Ratings ", path: "/ratings" },
     ],
   },

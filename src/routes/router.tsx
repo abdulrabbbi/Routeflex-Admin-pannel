@@ -21,6 +21,10 @@ import UserTypesPage from "../pages/UserTypesPage";
 import IndividualUsersPage from "../components/users/IndividualUserPage";
 import BusinessUsersPage from "../components/users/BusinessUserPage";
 import PendingOrder from "../components/orders/PendingOrder";
+import ProgressOrder from "../components/orders/ProgressOrder";
+import DriverProfile from "../pages/DriverProfile";
+import PendingDriversTable from "../components/drivers/PendingDriverTable";
+import BannedDriversTable from "../components/drivers/BannedDriversTable";
 
 
 const ErrorFallback = () => (
@@ -53,13 +57,16 @@ const Router = () =>
             { index: true, element: <DashboardContent /> },
             { path: "tracking", element: <TrackingPage /> },
             { path: "tracking/driver/:id", element: <DriverDetailsPage /> },
+            { path: "pending-drivers", element: <PendingDriversTable /> },
+            { path: "banned-drivers", element: <BannedDriversTable /> },
             { path: "parcel-tracking", element: <ParcelTrackingPage /> },
             { path: "parcel-tracking/completed", element: <CompletedDeliveries /> },
             { path: "parcel-tracking/cancelled", element: <CancelledDeliveries /> },
-
+            { path: "tracking/driver/:id/profile/overview", element: <DriverProfile /> },
             // orders
             { path: "orders", element: <OrdersPage /> },
-            { path: "pending-order", element: <PendingOrder /> },
+            { path: "pending-assignments", element: <PendingOrder /> },
+            { path: "ongoing-order", element: <ProgressOrder /> },
             // { path: "orders/:id", element: <OrderDetail /> },
 
 

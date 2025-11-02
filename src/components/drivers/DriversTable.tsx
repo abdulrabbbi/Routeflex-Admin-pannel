@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FaEye } from "react-icons/fa";
 import { AiFillStar } from "react-icons/ai";
 import { toast } from "react-hot-toast";
-
+import { Link } from "react-router-dom";
 import { getDrivers } from "../../api/deliveryService";
 import TablePager from "../../components/ui/shared/TablePager";
 import AvatarCell from "./AvatarCell";
@@ -265,7 +265,9 @@ const DriversTable: React.FC = React.memo(() => {
           </td>
 
           <td className="px-4 py-4 text-sm text-center text-[#1e1e38]">
-            {displayId}
+            <Link to={`driver/${d._id}/profile/overview`}>
+              {displayId}
+            </Link>
           </td>
 
           {/* On small screens we still need the name column visible */}
@@ -290,11 +292,10 @@ const DriversTable: React.FC = React.memo(() => {
 
           <td className="px-4 py-4 text-sm text-center">
             <span
-              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                d.isVerified
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-700"
-              }`}
+              className={`px-3 py-1 rounded-full text-xs font-medium ${d.isVerified
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+                }`}
             >
               {d.isVerified ? "Verified" : "Not Verified"}
             </span>
@@ -306,7 +307,7 @@ const DriversTable: React.FC = React.memo(() => {
 
           <td className="px-4 py-4 text-sm text-center">
             <button
-              onClick={() => navigate(`/tracking/driver/${d._id}`)}
+              onClick={() => navigate(`/tracking/driver/${d._id}/profile/overview`)}
               className="p-2 rounded-lg hover:bg-gray-100"
               aria-label="View driver details"
             >

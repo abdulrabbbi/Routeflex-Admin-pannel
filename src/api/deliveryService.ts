@@ -95,6 +95,32 @@ export const getDrivers = async (limit: number = 10, page: number = 1) => {
     throw error;
   }
 };
+// pending drivers
+export const getPendingDrivers = async (
+  page: number = 1,
+  limit: number = 10
+) => {
+  try {
+    const response = await apiClient.get(`/users/drivers/pending`, {
+      params: { page, limit, emailVerified: false },
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// get active driver
+export const getActiveDriver = async (page: number = 1, limit: number = 10) => {
+  try {
+    const response = await apiClient.get(`/users/drivers/active`, {
+      params: { page, limit },
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
 
 export const getDriverById = async (id: string) => {
   try {
@@ -195,6 +221,40 @@ export const markNotificationAsRead = async (id: string) => {
     return response.data;
   } catch (error) {
     console.error("Failed to mark notification as read", error);
+    throw error;
+  }
+};
+
+// approve driver
+export const approveDriver = async (id: string) => {
+  try {
+    const response = await apiClient.patch(`/users/drivers/${id}/approve`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// reject driver
+export const rejectDriver = async (id: string, reason?: string) => {
+  try {
+    const response = await apiClient.patch(`/users/drivers/${id}/reject`, {
+      reason, // optional: include a rejection reason if your backend accepts it
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// banned Driver
+export const getBannedDrivers = async (page = 1, limit = 10) => {
+  try {
+    const response = await apiClient.get(`/users/drivers/banned`, {
+      params: { page, limit },
+    });
+    return response.data;
+  } catch (error) {
     throw error;
   }
 };

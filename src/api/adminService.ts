@@ -189,3 +189,56 @@ export const getCustomerStats = async (): Promise<CustomerStats> => {
   );
   return data.data;
 };
+
+
+
+// ---- Driver Profile Overview ----
+export type DriverProfileOverviewData = {
+  status: string;
+  meta: {
+    driverId: string;
+    range: string;
+    from: string;
+    to: string;
+  };
+  headerCards: {
+    assigned: number;
+    inProgress: number;
+    completed: number;
+    revenue: number;
+    avgRating: number;
+    acceptanceRate: number;
+    cancellationRate: number;
+    cancelled: number;
+  };
+  overview: {
+    onTimeRate: number;
+    series: { date: string; count: number }[];
+  };
+  breakdowns: {
+    byPackage: { label: string; count: number }[];
+    byVehicle: { label: string; count: number }[];
+  };
+  recent: {
+    _id: string;
+    route: {
+      distance: number;
+      packageCategory: string;
+      vehicleType?: string;
+    };
+    paymentStatus: string;
+    status: string;
+    createdAt: string;
+    completedAt?: string;
+  }[];
+};
+
+
+export async function getDriverProfileOverview(
+  driverId: string
+): Promise<DriverProfileOverviewData> {
+  const { data } = await apiClient.get<DriverProfileOverviewData>(
+    `/deliveries/drivers/${driverId}/profile/overview`
+  );
+  return data;
+}

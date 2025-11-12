@@ -4,6 +4,7 @@ import Router from "./routes/router";
 import { SocketProvider } from "./realtime/SocketProvider";
 import useAuthToken from "./realtime/useAuthToken";
 import apiClient from "./api/api";
+import { GoogleMapsProvider } from "./components/Maps/providers/GoogleMapsProvider";
 
 // Prefer a dedicated WS URL; fallback to your API base
 // CRA uses REACT_APP_* env vars at build-time
@@ -28,7 +29,9 @@ const App: React.FC = () => {
 
   return (
     <SocketProvider accessToken={token} baseUrl={WS_BASE}>
-      <RouterProvider router={router} />
+      <GoogleMapsProvider>
+        <RouterProvider router={router} />
+      </GoogleMapsProvider>
     </SocketProvider>
   );
 };

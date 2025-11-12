@@ -38,8 +38,7 @@ const Router = () =>
       lazy: async () => {
         const { default: ProtectedRoute } = await import("../middlewares/ProtectedRoute");
         return {
-          Component: ({ children }: { children?: React.ReactNode }) =>
-            withSuspense(React.createElement(ProtectedRoute as any, null, children)),
+          element: withSuspense(React.createElement(ProtectedRoute as any)),
         };
       },
       children: [
@@ -56,7 +55,7 @@ const Router = () =>
               }),
             },
 
-            // Tracking
+            // Driver-Tracking
             {
               path: "tracking",
               lazy: async () => ({
@@ -90,19 +89,14 @@ const Router = () =>
               }),
             },
 
-            // Parcel tracking + subroutes
-            {
-              path: "parcel-tracking",
-              lazy: async () => ({
-                Component: (await import("../pages/ParcelTrackingPage")).default,
-              }),
-            },
-            {
-              path: "parcel-tracking/completed",
-              lazy: async () => ({
-                Component: (await import("../components/deliveries/CompletedDeliveries")).default,
-              }),
-            },
+            // // Parcel tracking + subroutes
+            // {
+            //   path: "parcel-tracking",
+            //   lazy: async () => ({
+            //     Component: (await import("../pages/ParcelTrackingPage")).default,
+            //   }),
+            // },
+           
             {
               path: "parcel-tracking/cancelled",
               lazy: async () => ({
@@ -133,6 +127,13 @@ const Router = () =>
               path: "orders/assign",
               lazy: async () => ({
                 Component: (await import("../components/orders/JobAssignmentPage")).default,
+              }),
+            },
+
+             {
+              path: "/completed",
+              lazy: async () => ({
+                Component: (await import("../pages/Oder/CompletedDeliveriesPage")).default,
               }),
             },
 

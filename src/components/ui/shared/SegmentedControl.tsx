@@ -8,10 +8,17 @@ type Props = {
   className?: string;
 };
 
-export default function SegmentedControl({ items, value, onChange, className }: Props) {
+export default function SegmentedControl({
+  items,
+  value,
+  onChange,
+  className,
+}: Props) {
   return (
     <div
-      className={`inline-flex items-center rounded-full border border-emerald-200 bg-white p-1 ${className || ""}`}
+      className={`inline-flex items-center rounded-full border border-emerald-200 bg-white p-1 ${
+        className || ""
+      }`}
       role="tablist"
       aria-label="Orders/Drivers toggle"
     >
@@ -27,13 +34,13 @@ export default function SegmentedControl({ items, value, onChange, className }: 
               "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
               active
                 ? "bg-emerald-500 text-white shadow-sm"
-                : "text-emerald-600 hover:bg-emerald-50"
+                : "text-emerald-600 hover:bg-emerald-50",
             ].join(" ")}
             style={{
               borderTopLeftRadius: idx === 0 ? 999 : 999,
               borderBottomLeftRadius: idx === 0 ? 999 : 999,
               borderTopRightRadius: idx === items.length - 1 ? 999 : 999,
-              borderBottomRightRadius: idx === items.length - 1 ? 999 : 999
+              borderBottomRightRadius: idx === items.length - 1 ? 999 : 999,
             }}
           >
             {it.label}

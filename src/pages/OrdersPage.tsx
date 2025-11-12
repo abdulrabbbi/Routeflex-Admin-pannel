@@ -3,8 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { MdRefresh } from "react-icons/md";
 import { approveJob, listAdminJobs, rejectJob } from "../api/jobs";
-import SegmentedControl from "../components/ui/shared/SegmentedControl";
-import Segmented, { RangeType } from "../utils/Dashboard/Segmented"; // ✅ ADD THIS
+import  { RangeType } from "../utils/Dashboard/Segmented";
 import JobAssignmentPage from "../components/orders/JobAssignmentPage";
 import OrdersTable from "../components/orders/OrdersTable";
 
@@ -72,7 +71,7 @@ const OrdersPage: React.FC<OrdersPageProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [tab, page, limit, approvalStatus, status, refreshKey, range]); // ✅ Added range dependency
+  }, [tab, page, limit, approvalStatus, status, refreshKey]); 
 
   const setParam = (key: string, value: string | number) => {
     const next = new URLSearchParams(params);
@@ -271,11 +270,6 @@ const OrdersPage: React.FC<OrdersPageProps> = ({
                 {s.replace("-", " ")}
               </button>
             ))}
-          </div>
-
-          {/* ✅ Range Filter (NEW) */}
-          <div className="flex justify-end mb-4">
-            <Segmented value={range} onChange={setRange} />
           </div>
         </>
       )}

@@ -1,18 +1,19 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import ConfirmModal from "../ConfirmModal";
-import { EmptyStateRow } from "../ui/shared/EmptyStateRow";
-import { TableSkeleton } from "../ui/shared/Skeleton";
-import { DeliveriesRow } from "./DeliveriesRow";
-import { DeliveriesHeader } from "./DeliveriesHeader";
-import { Pagination } from "./Pagination";
-import { StatsSkeleton } from "./StatsSkeleton";
-import { exportDeliveriesCsv } from "../../utils/deliveries/exportCsv";
-import { useDeliveries } from "../../hooks/useDeliveries";
+import { toast } from "react-hot-toast";
+import ConfirmModal from "../../ui/shared/ConfirmModal";
+import { EmptyStateRow } from "../../ui/shared/EmptyStateRow";
+import { TableSkeleton } from "../../ui/shared/Skeleton";
+import { DeliveriesRow } from "./components/DeliveriesRow";
+import { DeliveriesHeader } from "./components/DeliveriesHeader";
+import { Pagination } from "../../ui/shared/Pagination";
+import { exportDeliveriesCsv } from "../../../utils/deliveries/exportCsv";
+import { useDeliveries } from "../../../hooks/useDeliveries";
+import RefreshButton from "../../ui/shared/RefreshButton"; 
 
 interface DeliveriesTables {
-  statusFilter: "completed" | "cancelled";
+  statusFilter: "completed";
 }
 
 const DeliveriesTable: React.FC<DeliveriesTables> = React.memo(({ statusFilter }) => {
@@ -25,15 +26,16 @@ const DeliveriesTable: React.FC<DeliveriesTables> = React.memo(({ statusFilter }
     setLimit,
     totalPages,
     isLoading,
-    isInitialLoading,
     err,
     onPrev,
     onNext,
     removeDelivery,
-  } = useDeliveries(statusFilter); // pass filter here 👈
+    fetchDeliveries,
+  } = useDeliveries(statusFilter);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const onExport = () => {
     try {
@@ -89,19 +91,28 @@ const DeliveriesTable: React.FC<DeliveriesTables> = React.memo(({ statusFilter }
     <div className="p-6" aria-busy={isLoading}>
       <ConfirmModal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onConfirm={async () => {
-          if (!deleteId) return;
-          await removeDelivery(deleteId);
+        onClose={() => {
+          if (isDeleting) return;
           setModalOpen(false);
-          setDeleteId(null);
+        }}
+        onConfirm={async () => {
+          if (!deleteId || isDeleting) return;
+          setIsDeleting(true);
+          const toastId = toast.loading("Deleting delivery...");
+          try {
+            await removeDelivery(deleteId);
+            setModalOpen(false);
+            setDeleteId(null);
+          } finally {
+            toast.dismiss(toastId);
+            setIsDeleting(false);
+          }
         }}
         title="Delete Delivery"
         message="Are you sure you want to delete this delivery? This action cannot be undone."
+        confirmText="Delete"
+        loading={isDeleting}
       />
-
-      {isInitialLoading }
-      {/* {&& <StatsSkeleton />} */}
 
       <DeliveriesHeader
         filter={filter}
@@ -112,6 +123,22 @@ const DeliveriesTable: React.FC<DeliveriesTables> = React.memo(({ statusFilter }
         disabled={isLoading}
       />
 
+      <div className="flex justify-between mb-4">
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPrev={onPrev}
+          onNext={onNext}
+          disabled={isLoading}
+        />
+        <RefreshButton
+          onClick={() => fetchDeliveries(page, filter, limit)}
+          disabled={isLoading}
+          loading={isLoading}
+          variant="success"
+        />
+      </div>
+
       <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -121,33 +148,13 @@ const DeliveriesTable: React.FC<DeliveriesTables> = React.memo(({ statusFilter }
                 <th className="px-2 py-3 text-xs text-[#22c55e] uppercase text-center">Driver ID</th>
                 <th className="px-2 py-3 text-xs text-[#22c55e] uppercase text-center">Driver Name</th>
                 <th className="px-2 py-3 text-xs text-[#22c55e] uppercase text-center">Status</th>
-                {/* <th className="px-4 py-3 text-xs text-[#22c55e] uppercase text-center hidden md:table-cell">Payment</th> */}
-                <th className="px-2 py-3 text-xs text-[#22c55e] uppercase text-center hidden md:table-cell">Distance</th>
-                <th className="px-2 py-3 text-xs text-[#22c55e] uppercase text-center hidden md:table-cell">Package</th>
+                <th className="px-2 py-3 text-xs text-[#22c55e] uppercase text-center">Distance</th>
+                <th className="px-2 py-3 text-xs text-[#22c55e] uppercase text-center">Package</th>
                 <th className="px-2 py-3 text-xs text-[#22c55e] uppercase text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">{body}</tbody>
           </table>
-        </div>
-
-        <div className="px-4 py-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <Pagination
-              page={page}
-              totalPages={totalPages}
-              onPrev={onPrev}
-              onNext={onNext}
-              disabled={isLoading}
-            />
-            <div className="text-xs text-gray-500">
-              Showing <strong>{deliveries.length}</strong> item(s) • Range:{" "}
-              <strong className="capitalize">
-                {filter === "six_months" ? "six months" : filter}
-              </strong>{" "}
-              • Limit {limit}
-            </div>
-          </div>
         </div>
       </div>
     </div>

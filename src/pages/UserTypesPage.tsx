@@ -7,7 +7,8 @@ import {
   getUsersByRole,
 } from "../api/deliveryService";
 import UsersTable, { BaseUser } from "../components/users/UsersTable";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 
 type AnyUser = BusinessUser | IndividualUser;
 
@@ -76,10 +77,24 @@ const UserTypesPage: React.FC<Props> = ({ role, title }) => {
         ...u,
       }));
 
-      const ws = XLSX.utils.json_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, `${role}-users`);
-      XLSX.writeFile(wb, `users_${role}_all.xlsx`);
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet(`${role}-users`);
+
+      if (rows.length > 0) {
+        const columns = Object.keys(rows[0]).map((key) => ({
+          header: key,
+          key,
+        }));
+        // @ts-ignore exceljs Column type
+        ws.columns = columns as any;
+        rows.forEach((r) => ws.addRow(r));
+      }
+
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      saveAs(blob, `users_${role}_all.xlsx`);
     } catch (e) {
       console.error(e);
       alert("Export failed");

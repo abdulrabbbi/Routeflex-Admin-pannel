@@ -1,4 +1,3 @@
-"use client";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { getDeliveries, deleteDelivery } from "../api/deliveryService";
@@ -8,7 +7,7 @@ import {
   RangeFilter,
 } from "../types/deliveries";
 
-export function useDeliveries(statusFilter?: "completed" | "cancelled") {
+export function useDeliveries(statusFilter: "completed") {
   const [deliveries, setDeliveries] = useState<DeliveryRowApi[]>([]);
   const [filter, setFilter] = useState<RangeFilter>("daily");
   const [page, setPage] = useState(1);
@@ -30,18 +29,16 @@ export function useDeliveries(statusFilter?: "completed" | "cancelled") {
         setIsLoading(true);
         setErr("");
 
-        // 👇 Pass the optional statusFilter to your API
         const res: DeliveriesApiResponse = await getDeliveries(
           lm,
           pageNum,
           selectedFilter,
-          statusFilter // <--- add this argument
+          statusFilter // This filters by "completed"
         );
 
         let items = res?.data?.deliveries ?? [];
 
-        // 👇 If your API doesn't yet support filtering by status,
-        // you can also filter here on the client:
+        // Only keep "completed" deliveries as per the statusFilter
         if (statusFilter) {
           items = items.filter(
             (d) => d.status.toLowerCase() === statusFilter.toLowerCase()
@@ -71,7 +68,7 @@ export function useDeliveries(statusFilter?: "completed" | "cancelled") {
         setIsLoading(false);
       }
     },
-    [filter, limit, statusFilter] // 👈 include it as a dependency
+    [filter, limit, statusFilter] // Only depends on statusFilter
   );
 
   useEffect(() => {

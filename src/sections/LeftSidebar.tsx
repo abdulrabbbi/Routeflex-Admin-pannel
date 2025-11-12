@@ -42,7 +42,7 @@ const menuItems: MenuItem[] = [
       { icon: MdAssignment, label: "Pending Assignments", path: "/pending-assignments" },
       { icon: MdAssignment, label: "Ongoing Order", path: "/ongoing-order" },
       { icon: MdLocalShipping, label: "Assign to Driver", path: "/orders/assign" },
-      { icon: MdCheckCircle, label: "Completed", path: "/parcel-tracking/completed" },
+      { icon: MdCheckCircle, label: "Completed", path: "/completed" },
       { icon: MdBlockFlipped, label: "Cancelled Orders", path: "/parcel-tracking/cancelled" },
     ],
   },

@@ -18,11 +18,17 @@ export type NotificationDoc = {
 type Props = {
   className?: string;
   pageSize?: number;
+  /** Max scrollable height of the list area (px). Default: 420 */
+  maxHeight?: number;
+  /** Max panel width (px). Default: 360 */
+  maxWidth?: number;
 };
 
 export default function NotificationsPanel({
   className = "",
   pageSize = 20,
+  maxHeight = 420,
+  maxWidth = 360,
 }: Props) {
   const [notifications, setNotifications] = useState<NotificationDoc[]>([]);
   const [markingId, setMarkingId] = useState<string | null>(null);
@@ -87,31 +93,50 @@ export default function NotificationsPanel({
   };
 
   return (
-    <section className={`flex flex-col ${className}`}>
-      <div className="flex items-center justify-between mb-4 sticky -top-5 bg-white z-10 p-3">
-        <h3 className="text-lg font-semibold">Notifications</h3>
-        <div className="flex items-center gap-3">
-          <button
-            className="text-green-600 text-sm hover:underline"
-            onClick={fetchNotifications}
-          >
-            Refresh
-          </button>
-          
+    <section
+      className={`flex flex-col ${className}`}
+      /* Responsive container:
+         - clamp width for popover usage on desktop
+         - allow full width inside parent on mobile
+      */
+      style={{
+        width: "100%",
+        maxWidth, // e.g. 360
+        minWidth: 260,
+      }}
+    >
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-white border-b">
+        <div className="flex items-center justify-between px-3 py-3">
+          <h3 className="text-base font-semibold">Notifications</h3>
+          <div className="flex items-center gap-3">
+            <button
+              className="text-green-600 text-sm hover:underline"
+              onClick={fetchNotifications}
+            >
+              Refresh
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto min-h-0 pr-1">
+      {/* Scroll area — responsive max height */}
+      <div
+        className="flex-1 overflow-y-auto px-3 pb-3"
+        style={{
+          maxHeight, // e.g. 420px in popovers; grow if you pass larger
+        }}
+      >
         {notifications.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-gray-400 text-center px-4">
+          <div className="flex items-center justify-center text-gray-400 text-center px-4 py-10">
             No new notifications.
           </div>
         ) : (
-          <div className="space-y-4">
+          <ul className="space-y-3">
             {notifications.map((n) => (
-              <div
+              <li
                 key={n._id}
-                className="relative group flex gap-3 bg-gray-50 hover:bg-gray-100 transition rounded-lg p-4 border border-gray-200"
+                className="relative group flex gap-3 bg-gray-50 hover:bg-gray-100 transition rounded-lg p-3 border border-gray-200"
               >
                 <div className="rounded-full bg-green-100 p-2 h-fit">
                   <IoNotifications className="h-4 w-4 text-green-600" />
@@ -136,7 +161,7 @@ export default function NotificationsPanel({
                   onClick={() => handleMarkAsRead(n._id)}
                   disabled={markingId === n._id}
                   title="Mark as read"
-                  className={`hidden group-hover:flex absolute top-2 right-2 items-center justify-center
+                  className={`hidden sm:flex group-hover:flex absolute top-2 right-2 items-center justify-center
                     rounded bg-green-100 hover:bg-green-200 p-1 transition
                     disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
@@ -146,9 +171,9 @@ export default function NotificationsPanel({
                     <MdCheck className="h-4 w-4 text-green-600" />
                   )}
                 </button>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </div>
     </section>

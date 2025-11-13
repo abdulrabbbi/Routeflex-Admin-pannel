@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
-import MapLeaflet from "../components/Maps/TrackingMap";
 import GoogleTrackingMap from "../components/Maps/GoogleTrackingMap";
 import DriverTracking from "../components/DriverTracking";
 import DriversTable from "../components/drivers/DriversTable";
@@ -145,11 +144,11 @@ const TrackingPage = () => {
         {/* Map with overlay */}
         {currentLocation && (
           <div className="relative rounded-2xl overflow-hidden shadow-lg h-[70vh]">
-            {(import.meta as any)?.env?.VITE_GOOGLE_MAPS_API_KEY ? (
+            {/* {(import.meta as any)?.env?.VITE_GOOGLE_MAPS_API_KEY ? ( */}
               <GoogleTrackingMap route={route} currentLocation={currentLocation} />
-            ) : (
-              <MapLeaflet route={route} currentLocation={currentLocation} />
-            )}
+            {/* ) : ( */}
+              {/* <MapLeaflet route={route} currentLocation={currentLocation} /> */}
+            {/* )} */}
 
             {/* Overlay cards */}
             <div className="absolute bottom-4 left-4 flex flex-wrap gap-3 z-[999]">

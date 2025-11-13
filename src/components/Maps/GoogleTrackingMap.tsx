@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import useGoogleMaps from "../../hooks/useGoogleMaps";
+import { MAPS_LOADER_OPTIONS } from "./config/config";
 
 type LatLng = [number, number];
 
@@ -9,9 +10,7 @@ interface MapProps {
 }
 
 const GoogleTrackingMap = ({ route, currentLocation }: MapProps) => {
-  const apiKey = (import.meta as any)?.env?.VITE_GOOGLE_MAPS_API_KEY as
-    | string
-    | undefined;
+  const apiKey = MAPS_LOADER_OPTIONS.googleMapsApiKey || "";
   const { ready, error } = useGoogleMaps(apiKey || null);
   const mapRef = useRef<HTMLDivElement | null>(null);
   const gmapRef = useRef<any>(null);
@@ -95,4 +94,3 @@ const GoogleTrackingMap = ({ route, currentLocation }: MapProps) => {
 };
 
 export default GoogleTrackingMap;
-

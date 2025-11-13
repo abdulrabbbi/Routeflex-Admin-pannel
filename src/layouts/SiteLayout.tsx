@@ -15,7 +15,6 @@ const DashboardLayout = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header
           onMenuClick={() => setLeftSidebarOpen(true)}
-          onNotificationClick={() => setRightSidebarOpen(true)}
         />
 
         <div className="flex-1 flex overflow-hidden">

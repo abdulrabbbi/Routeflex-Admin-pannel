@@ -1,7 +1,7 @@
-import { useEffect, useState, useRef } from "react";
-import { MdMenu, MdSearch, MdLightMode, MdNotifications } from "react-icons/md";
-import { Images } from "../assets/images";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { MdMenu, MdSearch, MdNotifications } from "react-icons/md";
 import { useLocation } from "react-router-dom";
+import { Images } from "../assets/images";
 import { getImageUrl } from "../utils/getImageUrl";
 import { getSignedUrl, s3UrlToKey } from "../utils/s3";
 import NotificationsPanel from "../components/rightbar/NotificationsPanel";
@@ -13,13 +13,15 @@ type User = {
   role?: string;
 };
 
-const Header = ({ onMenuClick }: any) => {
-  const location = useLocation();
-  const [user, setUser] = useState<User | null>(null);
-  const [activeMenu, setActiveMenu] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement | null>(null);
+type HeaderProps = {
+  onMenuClick?: () => void;
+};
 
-  // Read user from local or session storage
+const Header = ({ onMenuClick }: HeaderProps) => {
+  const location = useLocation();
+
+  /** ---------------- user state (from local/session) ---------------- */
+  const [user, setUser] = useState<User | null>(null);
   useEffect(() => {
     const readUser = () => {
       const raw =
@@ -31,7 +33,6 @@ const Header = ({ onMenuClick }: any) => {
       }
     };
     setUser(readUser());
-
     const onStorage = (e: StorageEvent) => {
       if (e.key === "user" || e.key === "token") setUser(readUser());
     };
@@ -39,33 +40,15 @@ const Header = ({ onMenuClick }: any) => {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  // Toggle dropdowns
-  const toggleMenu = (menu: string) => {
-    setActiveMenu(activeMenu === menu ? null : menu);
-  };
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setActiveMenu(null);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Handle user profile image
-  const [profileSrc, setProfileSrc] = useState<string | null>(null);
-  const [resolving, setResolving] = useState<boolean>(false);
+  /** ---------------- profile photo resolution (S3 / http / asset) ---------------- */
+  const [profileSrc, setProfileSrc] = useState<string>(Images.Avatar);
   const [imgLoaded, setImgLoaded] = useState<boolean>(false);
 
   useEffect(() => {
     let cancelled = false;
-    const v = user?.profilePicture || "";
+    const v = user?.profilePicture?.trim() || "";
 
-    const compute = async () => {
-      setResolving(true);
+    const resolve = async () => {
       setImgLoaded(false);
       try {
         if (!v) {
@@ -75,131 +58,134 @@ const Header = ({ onMenuClick }: any) => {
           }
           return;
         }
-
         const isHttp = /^https?:/i.test(v);
         const isS3Http = isHttp && /amazonaws\.com/.test(v);
         const isKeyLikely = !isHttp && !v.startsWith("/");
 
         if (isS3Http || isKeyLikely) {
           const signed = await getSignedUrl(s3UrlToKey(v), 300);
-          if (!cancelled) setProfileSrc(signed || Images.Avatar);
+          if (!cancelled) setProfileSrc(signed || v || Images.Avatar);
         } else {
-          const url = getImageUrl(v);
+          const url = getImageUrl(v) || v;
           if (!cancelled) setProfileSrc(url || Images.Avatar);
         }
       } catch {
-        if (!cancelled) {
-          setProfileSrc(Images.Avatar);
-          setImgLoaded(true);
-        }
+        if (!cancelled) setProfileSrc(Images.Avatar);
       } finally {
-        if (!cancelled) setResolving(false);
+        if (!cancelled) setImgLoaded(true);
       }
     };
 
-    void compute();
+    void resolve();
     return () => {
       cancelled = true;
     };
   }, [user?.profilePicture]);
 
-  // Map routes to labels
-  // Inside Header component, replace this:
-const routeNames: Record<string, string> = {
-  "/": "Dashboard",
-  "/tracking": "Driver Tracking",
-  "/parcel-tracking": "Parcel Tracking",
-  "/route-listing": "Route Listing",
-  "/payments": "Payment",
-  "/settings": "Settings",
-  "/user-types": "Users",
-};
+  /** ---------------- notifications dropdown (old working style) ---------------- */
+  const [openMenu, setOpenMenu] = useState<"notify" | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenu(null);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
 
-// New logic for dynamic route matching
-let pageName = "Dashboard";
+  const toggleNotify = () =>
+    setOpenMenu((v) => (v === "notify" ? null : "notify"));
 
-// Match driver profile overview with dynamic ID
-if (
-  location.pathname.startsWith("/tracking/driver/") &&
-  location.pathname.endsWith("/profile/overview")
-) {
-  pageName = "Driver Profile";
-} else {
-  pageName = routeNames[location.pathname] || "Dashboard";
-}
+  /** ---------------- computed display name & role label ---------------- */
+  const displayName = useMemo(() => {
+    const f = user?.firstName?.trim() || "";
+    const l = user?.lastName?.trim() || "";
+    const full = `${f} ${l}`.trim();
+    return full || "Admin User";
+  }, [user?.firstName, user?.lastName]);
 
+  const roleLabel = useMemo(() => {
+    if (!user?.role) return "Administrator";
+    return user.role.toLowerCase() === "admin" ? "Administrator" : user.role;
+  }, [user?.role]);
+
+  /** ---------------- UI ---------------- */
   return (
-    <header className="h-16 border-b bg-white relative">
-      <div className="h-full px-4 flex items-center">
-        {/* Menu button */}
+    <header className="h-16 bg-[#F3F5F7] border-b border-gray-200">
+      <div className="h-full px-3 sm:px-4 md:px-6 flex items-center gap-3">
+        {/* Mobile menu */}
         <button
-          className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
+          className="lg:hidden p-2 rounded-lg hover:bg-gray-200/60"
           onClick={onMenuClick}
+          aria-label="Open menu"
         >
-          <MdMenu size={24} />
+          <MdMenu size={22} className="text-gray-700" />
         </button>
 
-        {/* Breadcrumbs */}
-        <nav className="hidden sm:flex items-center space-x-4 ml-4">
-          <span className="text-sm font-medium">Dashboard</span>
-          <span className="text-sm text-gray-500">/</span>
-          <span className="text-sm font-medium">{pageName}</span>
-        </nav>
-
-        <div className="ml-auto  flex items-center space-x-4">
-          {/* Search */}
-          <div className="hidden md:flex items-center relative">
-            <MdSearch className="absolute left-3 text-gray-400" size={20} />
+        {/* Search pill */}
+        <div className="flex-1">
+          <div className="relative max-w-[560px]">
+            <MdSearch
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              size={18}
+            />
             <input
               type="search"
-              placeholder="Search..."
-              className="pl-10 pr-4 py-2 border  rounded-lg w-[300px] focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="Search orders, drivers, customers..."
+              className="w-full pl-10 pr-4 py-2.5 bg-white rounded-full border border-gray-200
+                         shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent
+                         placeholder:text-gray-400 text-[14px]"
             />
           </div>
+        </div>
 
-          {/* Theme toggle */}
-          <button className="p-2 hover:bg-gray-100 rounded-lg">
-            <MdLightMode size={20} />
-          </button>
-
-          {/* Notifications */}
+        {/* Right cluster */}
+        <div className="flex items-center gap-3 md:gap-4">
+          {/* Notifications with red badge (local dropdown) */}
           <div className="relative" ref={menuRef}>
             <button
-              className="p-2 hover:bg-gray-100 rounded-lg"
-              onClick={() => toggleMenu("notify")}
+              onClick={toggleNotify}
+              className="relative p-2 rounded-full bg-white hover:bg-gray-50 border border-gray-200"
+              aria-label="Notifications"
             >
-              <MdNotifications size={20} />
+              <MdNotifications size={18} className="text-gray-700" />
+              <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center leading-none">
+                2
+              </span>
             </button>
 
-            {activeMenu === "notify" && (
-              <div className="absolute right-0 mt-2 bg-white  w-[300px] rounded-md shadow-full p-4 max-h-[400px] overflow-y-auto z-50">
-                
-                <NotificationsPanel />
+            {openMenu === "notify" && (
+              <div className="absolute right-0 mt-2 w-[320px] max-h-[420px] overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                {/* <NotificationsPanel /> */}
+                <NotificationsPanel pageSize={20} maxHeight={420} maxWidth={360} />
+
               </div>
             )}
           </div>
 
-          {/* Profile */}
-          <div className="relative h-8 w-8">
-            {(resolving || !imgLoaded) && (
-              <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse" />
-            )}
-            {profileSrc && (
+          {/* Profile chip */}
+          <div className="flex items-center gap-2.5 md:gap-3 bg-white rounded-full border border-gray-200 py-1 pl-1.5 pr-3">
+            <div className="relative h-8 w-8">
+              <div className="absolute inset-0 rounded-full bg-green-200/70" />
               <img
-                key={profileSrc}
                 src={profileSrc}
                 alt="Profile"
-                className={`h-8 w-8 rounded-full object-cover ${resolving || !imgLoaded ? "hidden" : "block"
-                  }`}
-                onLoad={() => setImgLoaded(true)}
+                className="relative h-8 w-8 rounded-full object-cover"
                 onError={(e) => {
                   e.currentTarget.src = Images.Avatar;
-                  setImgLoaded(true);
                 }}
                 loading="lazy"
                 decoding="async"
               />
-            )}
+            </div>
+            <div className="hidden sm:block leading-tight">
+              <div className="text-[13px] font-semibold text-gray-800">
+                {displayName}
+              </div>
+              <div className="text-[11px] text-gray-500">{roleLabel}</div>
+            </div>
           </div>
         </div>
       </div>

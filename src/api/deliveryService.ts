@@ -175,6 +175,18 @@ export const deleteDelivery = async (deliveryId: string) => {
   return await apiClient.delete(`/deliveries/${deliveryId}`);
 };
 
+// ✅  for in-progress delivery list
+export const getInProgressDeliveries = async (
+  limit: number = 10,
+  page: number = 1
+): Promise<DeliveriesApiResponse> => {
+  const { data } = await apiClient.get<DeliveriesApiResponse>(
+    `/deliveries/deliveries/in-progress`,
+    { params: { limit, page } }
+  );
+  return data;
+};
+
 export const reverseGeocode = async (
   lat: number,
   lng: number

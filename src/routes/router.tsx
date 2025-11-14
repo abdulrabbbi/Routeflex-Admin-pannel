@@ -13,7 +13,9 @@ const ErrorFallback = () => (
   <div className="min-h-screen grid place-items-center p-6">
     <div className="max-w-md text-center space-y-3">
       <h1 className="text-2xl font-bold">Page not found</h1>
-      <p className="text-gray-600">The page you requested doesn't exist or has moved.</p>
+      <p className="text-gray-600">
+        The page you requested doesn't exist or has moved.
+      </p>
       <Link
         to="/"
         className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
@@ -36,7 +38,9 @@ const Router = () =>
       path: "/",
       // Lazy-load the auth guard itself
       lazy: async () => {
-        const { default: ProtectedRoute } = await import("../middlewares/ProtectedRoute");
+        const { default: ProtectedRoute } = await import(
+          "../middlewares/ProtectedRoute"
+        );
         return {
           element: withSuspense(React.createElement(ProtectedRoute as any)),
         };
@@ -44,7 +48,11 @@ const Router = () =>
       children: [
         {
           // App shell/layout — keep light; it’s lazy too
-          element: withSuspense(React.createElement(React.lazy(() => import("../layouts/SiteLayout")))),
+          element: withSuspense(
+            React.createElement(
+              React.lazy(() => import("../layouts/SiteLayout"))
+            )
+          ),
           errorElement: <ErrorFallback />,
           children: [
             // Dashboard (index)
@@ -79,13 +87,17 @@ const Router = () =>
             {
               path: "pending-drivers",
               lazy: async () => ({
-                Component: (await import("../components/drivers/PendingDriverTable")).default,
+                Component: (
+                  await import("../components/drivers/PendingDriverTable")
+                ).default,
               }),
             },
             {
               path: "banned-drivers",
               lazy: async () => ({
-                Component: (await import("../components/drivers/BannedDriversTable")).default,
+                Component: (
+                  await import("../components/drivers/BannedDriversTable")
+                ).default,
               }),
             },
 
@@ -96,11 +108,13 @@ const Router = () =>
             //     Component: (await import("../pages/ParcelTrackingPage")).default,
             //   }),
             // },
-           
+
             {
               path: "parcel-tracking/cancelled",
               lazy: async () => ({
-                Component: (await import("../components/deliveries/CancelledDeliveries")).default,
+                Component: (
+                  await import("../components/deliveries/CancelledDeliveries")
+                ).default,
               }),
             },
 
@@ -114,26 +128,32 @@ const Router = () =>
             {
               path: "pending-assignments",
               lazy: async () => ({
-                Component: (await import("../components/orders/PendingOrder")).default,
+                Component: (await import("../components/orders/PendingOrder"))
+                  .default,
               }),
             },
             {
               path: "ongoing-order",
               lazy: async () => ({
-                Component: (await import("../components/orders/ProgressOrder")).default,
+                Component: (await import("../components/orders/ProgressOrder"))
+                  .default,
               }),
             },
             {
               path: "orders/assign",
               lazy: async () => ({
-                Component: (await import("../components/orders/JobAssignmentPage")).default,
+                Component: (
+                  await import("../components/orders/JobAssignmentPage")
+                ).default,
               }),
             },
 
-             {
+            {
               path: "/completed",
               lazy: async () => ({
-                Component: (await import("../pages/Oder/CompletedDeliveriesPage")).default,
+                Component: (
+                  await import("../pages/Oder/CompletedDeliveriesPage")
+                ).default,
               }),
             },
 
@@ -144,7 +164,9 @@ const Router = () =>
                 const mod = await import("../pages/UserTypesPage");
                 const Page = mod.default;
                 return {
-                  Component: () => <Page role="individual" title="Individual Users" />,
+                  Component: () => (
+                    <Page role="individual" title="Individual Users" />
+                  ),
                 };
               },
             },
@@ -154,7 +176,9 @@ const Router = () =>
                 const mod = await import("../pages/UserTypesPage");
                 const Page = mod.default;
                 return {
-                  Component: () => <Page role="business" title="Business Users" />,
+                  Component: () => (
+                    <Page role="business" title="Business Users" />
+                  ),
                 };
               },
             },

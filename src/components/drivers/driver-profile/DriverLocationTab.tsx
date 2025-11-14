@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import MapLeaflet from "../../../components/Maps/TrackingMap";
 import GoogleTrackingMap from "../../../components/Maps/GoogleTrackingMap";
 import { getDriverTracking, reverseGeocode } from "../../../api/deliveryService";
 import { useSocket } from "../../../realtime/SocketProvider";
@@ -121,12 +120,8 @@ const DriverLocationTab: React.FC<DriverLocationTabProps> = ({ driverTrackingId 
         <p className="text-gray-600">Fetching live driver location...</p>
       ) : (
         <div className="relative rounded-2xl overflow-hidden shadow-lg h-[70vh]">
-          {(import.meta as any)?.env?.VITE_GOOGLE_MAPS_API_KEY ? (
             <GoogleTrackingMap route={route} currentLocation={currentLocation} />
-          ) : (
-            <MapLeaflet route={route} currentLocation={currentLocation} />
-          )}
-
+         
           {/* Overlay Info */}
           <div className="absolute bottom-4 left-4 flex flex-wrap gap-3 z-[999]">
             <div className="bg-white/90 backdrop-blur-sm p-3 rounded-xl shadow text-center min-w-[120px]">

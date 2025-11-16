@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { MdRefresh } from "react-icons/md";
 import { approveJob, listAdminJobs, rejectJob } from "../api/jobs";
-import  { RangeType } from "../utils/Dashboard/Segmented";
+import { RangeType } from "../utils/Dashboard/Segmented";
 import JobAssignmentPage from "../components/orders/JobAssignmentPage";
 import OrdersTable from "../components/orders/OrdersTable";
 
@@ -22,7 +22,10 @@ const OrdersPage: React.FC<OrdersPageProps> = ({
 }) => {
   const [params, setParams] = useSearchParams();
 
-  const tab = (params.get("tab") || "orders") as "orders" | "drivers";
+  const tab = (params.get("tab") || "orders") as
+    | "orders"
+    | "drivers"
+    | "pending-assignments";
   const page = Number(params.get("page") || 1);
   const limit = Number(params.get("limit") || 10);
   const approvalStatus = params.get("approvalStatus") || defaultApprovalStatus;
@@ -71,7 +74,7 @@ const OrdersPage: React.FC<OrdersPageProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [tab, page, limit, approvalStatus, status, refreshKey]); 
+  }, [tab, page, limit, approvalStatus, status, refreshKey]);
 
   const setParam = (key: string, value: string | number) => {
     const next = new URLSearchParams(params);
@@ -152,7 +155,8 @@ const OrdersPage: React.FC<OrdersPageProps> = ({
 
   const bulkApprove = async () => {
     const ids = eligibleRows.filter((r) => selected[r._id]).map((r) => r._id);
-    if (ids.length === 0) return toast.error("Select at least one eligible row");
+    if (ids.length === 0)
+      return toast.error("Select at least one eligible row");
     const t = toast.loading(`Approving ${ids.length}…`);
     try {
       await Promise.all(ids.map((id) => approveOne(id)));
@@ -164,7 +168,8 @@ const OrdersPage: React.FC<OrdersPageProps> = ({
 
   const bulkReject = async () => {
     const ids = eligibleRows.filter((r) => selected[r._id]).map((r) => r._id);
-    if (ids.length === 0) return toast.error("Select at least one eligible row");
+    if (ids.length === 0)
+      return toast.error("Select at least one eligible row");
     const reason = window.prompt("Reason (optional):") || undefined;
     const t = toast.loading(`Rejecting ${ids.length}…`);
     try {
@@ -191,9 +196,8 @@ const OrdersPage: React.FC<OrdersPageProps> = ({
           <h1 className="text-2xl font-bold text-[#22c55e]">Orders</h1>
         )}
 
-
         {/* Right actions */}
-        {tab === "orders" &&
+        {tab === "pending-assignments" &&
           approvalStatus === "approved" &&
           status === "accepted" && (
             <div className="flex items-center gap-2">
@@ -209,10 +213,11 @@ const OrdersPage: React.FC<OrdersPageProps> = ({
               <button
                 onClick={bulkReject}
                 disabled={eligibleRows.length === 0}
-                className={`px-3 py-2 rounded-xl font-medium ${eligibleRows.length === 0
+                className={`px-3 py-2 rounded-xl font-medium ${
+                  eligibleRows.length === 0
                     ? "bg-red-50 text-red-300 cursor-not-allowed"
                     : "bg-red-50 text-red-600 hover:bg-red-100"
-                  }`}
+                }`}
               >
                 Reject Selected
               </button>
@@ -220,10 +225,11 @@ const OrdersPage: React.FC<OrdersPageProps> = ({
               <button
                 onClick={bulkApprove}
                 disabled={eligibleRows.length === 0}
-                className={`px-3 py-2 rounded-xl text-white font-medium ${eligibleRows.length === 0
+                className={`px-3 py-2 rounded-xl text-white font-medium ${
+                  eligibleRows.length === 0
                     ? "bg-emerald-300 cursor-not-allowed"
                     : "bg-emerald-600 hover:bg-emerald-700"
-                  }`}
+                }`}
               >
                 Approve Selected
               </button>
@@ -240,10 +246,11 @@ const OrdersPage: React.FC<OrdersPageProps> = ({
               <button
                 key={a}
                 onClick={() => setParam("approvalStatus", a)}
-                className={`px-3 py-1.5 rounded-full border text-sm ${approvalStatus === a
+                className={`px-3 py-1.5 rounded-full border text-sm ${
+                  approvalStatus === a
                     ? "bg-[#24123A0D] border-[#24123A33] text-gray-900"
                     : "hover:bg-gray-50 text-gray-700"
-                  }`}
+                }`}
               >
                 {a[0].toUpperCase() + a.slice(1)}
               </button>
@@ -262,10 +269,11 @@ const OrdersPage: React.FC<OrdersPageProps> = ({
               <button
                 key={s}
                 onClick={() => setParam("status", s)}
-                className={`px-3 py-1.5 rounded-full border text-sm ${status === s
+                className={`px-3 py-1.5 rounded-full border text-sm ${
+                  status === s
                     ? "bg-[#24123A0D] border-[#24123A33] text-gray-900"
                     : "hover:bg-gray-50 text-gray-700"
-                  }`}
+                }`}
               >
                 {s.replace("-", " ")}
               </button>
@@ -296,6 +304,7 @@ const OrdersPage: React.FC<OrdersPageProps> = ({
           onApprove={approveOne}
           onReject={rejectOne}
           getViewUrl={(id) => `/orders/${id}`}
+          onRefresh={() => setRefreshKey((k) => k + 1)}
         />
       )}
     </div>

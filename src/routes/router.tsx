@@ -109,14 +109,14 @@ const Router = () =>
             //   }),
             // },
 
-            {
-              path: "parcel-tracking/cancelled",
-              lazy: async () => ({
-                Component: (
-                  await import("../components/deliveries/CancelledDeliveries")
-                ).default,
-              }),
-            },
+            // {
+            //   path: "parcel-tracking/cancelled",
+            //   lazy: async () => ({
+            //     Component: (
+            //       await import("../components/deliveries/CancelledDeliveries")
+            //     ).default,
+            //   }),
+            // },
 
             // Orders
             {

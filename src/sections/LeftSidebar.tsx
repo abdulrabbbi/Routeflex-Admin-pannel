@@ -56,18 +56,18 @@ const menuItems: MenuItem[] = [
         label: "Pending Assignments",
         path: "/pending-assignments",
       },
-      { icon: MdAssignment, label: "Ongoing Order", path: "/ongoing-order" },
       {
         icon: MdLocalShipping,
         label: "Assign to Driver",
         path: "/orders/assign",
       },
+      { icon: MdAssignment, label: "Ongoing Order", path: "/ongoing-order" },
       { icon: MdCheckCircle, label: "Completed", path: "/completed" },
-      {
-        icon: MdBlockFlipped,
-        label: "Cancelled Orders",
-        path: "/parcel-tracking/cancelled",
-      },
+      // {
+      //   icon: MdBlockFlipped,
+      //   label: "Cancelled Orders",
+      //   path: "/parcel-tracking/cancelled",
+      // },
     ],
   },
 

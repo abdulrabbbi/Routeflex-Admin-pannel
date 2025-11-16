@@ -6,6 +6,8 @@ import { TableSkeleton } from "../../components/ui/shared/Skeleton";
 import TablePager from "../../components/ui/shared/TablePager";
 import { EmptyStateRow } from "../../components/ui/shared/EmptyStateRow";
 import Tag from "../../components/ui/shared/Tag";
+import RowsPerPageSelector from "../../components/ui/shared/RowsPerPageSelector";
+import RefreshButton from "../../components/ui/shared/RefreshButton";
 import OrderDetail from "./OrderDetail";
 
 const MIN_ROWS = 10;
@@ -73,6 +75,7 @@ export default function OrdersTable({
   onApprove,
   onReject,
   getViewUrl = (id: string) => `/orders/${id}`,
+  onRefresh,
 }: {
   rows: Job[];
   loading?: boolean;
@@ -91,6 +94,7 @@ export default function OrdersTable({
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
   getViewUrl?: (id: string) => string;
+  onRefresh?: () => void;
 }) {
   const displayRows = useMemo(() => {
     if (loading) return [];
@@ -110,6 +114,24 @@ export default function OrdersTable({
   return (
     <>
       <div className="overflow-x-auto w-full bg-white rounded-2xl border shadow-sm">
+        <div className="px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-b text-xs text-gray-500">
+          <TablePager
+            page={page}
+            totalPages={totalPages}
+            onPrev={onPrev}
+            onNext={onNext}
+            disabled={loading}
+          />
+          {onRefresh && (
+            <RefreshButton
+              onClick={onRefresh}
+              disabled={loading}
+              loading={loading}
+              variant="success"
+            />
+          )}
+        </div>
+
         <table className="min-w-[860px] w-full text-sm border-collapse">
           <thead>
             <tr className="bg-[#f0fdf4] text-[#22c55e] text-xs uppercase">
@@ -127,7 +149,7 @@ export default function OrdersTable({
                 />
               </th>
               <th className="px-3 py-3 whitespace-nowrap">Order</th>
-              <th className="px-3 py-3 whitespace-nowrap">Customer Name</th>
+              <th className="px-3 py-3 whitespace-nowrap">Customer Email</th>
               <th className="px-3 py-3 whitespace-nowrap">Date & Time</th>
               <th className="px-3 py-3 whitespace-nowrap">Category</th>
               <th className="px-3 py-3 whitespace-nowrap">Price</th>
@@ -169,7 +191,8 @@ export default function OrdersTable({
                 }
 
                 const pb = placedBy(job);
-                const categoryColor = pb.type === "Business" ? "green" : "yellow";
+                const categoryColor =
+                  pb.type === "Business" ? "green" : "yellow";
                 const eligible = isEligible(job);
                 const idShort = `#${(job._id || "").slice(-4) || "----"}`;
 
@@ -185,14 +208,16 @@ export default function OrdersTable({
                     </td>
 
                     <td className="px-3 py-3 font-semibold cursor-pointer text-gray-900">
+
                       <div onClick={() => openDrawer(job._id)}>{idShort}</div>
                     </td>
 
                     <td className="px-3 py-3">
                       <div className="flex items-center justify-center gap-2">
-                        {avatarFromName(pb.name)}
                         <div className="text-left">
-                          <div className="font-medium text-gray-900">{pb.name}</div>
+                          <div className="font-medium text-gray-900">
+                            {pb.email}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -246,28 +271,7 @@ export default function OrdersTable({
         </table>
 
         <div className="px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t text-xs text-gray-500">
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">Rows:</label>
-            <select
-              value={limit}
-              onChange={(e) => onLimitChange(Number(e.target.value))}
-              className="border rounded-lg px-2 py-1.5 text-sm"
-            >
-              {[10, 20, 50].map((n) => (
-                <option key={n} value={n}>
-                  {n} / page
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <TablePager
-            page={page}
-            totalPages={totalPages}
-            onPrev={onPrev}
-            onNext={onNext}
-            disabled={loading}
-          />
+          <RowsPerPageSelector value={limit} onChange={onLimitChange} />
         </div>
       </div>
 

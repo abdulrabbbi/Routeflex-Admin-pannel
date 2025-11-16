@@ -1,7 +1,7 @@
-import DeliveriesTable from "./DeliveriesTable";
+// import DeliveriesTable from "../../components/Order/CompeletedOrder/DeliveriesTables";
 
-const CancelledDeliveries = () => {
-  return <DeliveriesTable statusFilter="cancelled" />;
-};
+// const CancelledDeliveries = () => {
+//   return <DeliveriesTable statusFilter="cancelled" />;
+// };
 
-export default CancelledDeliveries;
+// export default CancelledDeliveries;

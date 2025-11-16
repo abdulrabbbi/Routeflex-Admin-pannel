@@ -7,7 +7,6 @@ import apiClient from "../../api/api";
 import { getImageUrl } from "../../utils/getImageUrl";
 import { getSignedUrl, s3UrlToKey } from "../../utils/s3";
 import AvatarCell from ".././drivers/AvatarCell";
-import { useChatThread } from "../../realtime/useChatThread";
 import { useSocket } from "../../realtime/SocketProvider";
 
 type ChatProps = {
@@ -36,7 +35,8 @@ const Chat = ({ contact, onClose }: ChatProps) => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [resolvedAvatar, setResolvedAvatar] = useState<string | undefined>(undefined);
-  const meId = typeof window !== "undefined" ? (localStorage.getItem("userId") || "") : "";
+  const meId =
+    typeof window !== "undefined" ? localStorage.getItem("userId") || "" : "";
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const socket = useSocket();
@@ -54,6 +54,14 @@ const Chat = ({ contact, onClose }: ChatProps) => {
     return copy;
   }, []);
 
+  const scrollToBottom = useCallback(() => {
+    if (!listRef.current) return;
+    listRef.current.scrollTo({
+      top: listRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, []);
+
   // Fetch conversation on open / contact change
   useEffect(() => {
     let cancelled = false;
@@ -62,14 +70,10 @@ const Chat = ({ contact, onClose }: ChatProps) => {
       try {
         const res = await apiClient.get(`/chat/conversation/${contact.id}`);
         if (cancelled) return;
-        setMessages(res.data?.data?.messages || []);
+        const msgs: Msg[] = res.data?.data?.messages || [];
+        setMessages(msgs);
         // autoscroll on first load
-        setTimeout(() => {
-          listRef.current?.scrollTo({
-            top: listRef.current.scrollHeight,
-            behavior: "smooth",
-          });
-        }, 0);
+        setTimeout(scrollToBottom, 0);
       } catch (err) {
         console.error("Failed to fetch messages", err);
       }
@@ -79,7 +83,7 @@ const Chat = ({ contact, onClose }: ChatProps) => {
     return () => {
       cancelled = true;
     };
-  }, [contact]);
+  }, [contact, scrollToBottom]);
 
   // Resolve avatar: sign S3 key/URL, else build absolute, else fallback to initials
   useEffect(() => {
@@ -92,6 +96,7 @@ const Chat = ({ contact, onClose }: ChatProps) => {
     const isHttp = /^https?:/i.test(v);
     const isS3Http = isHttp && /amazonaws\.com/.test(v);
     const isKeyLikely = !isHttp && !v.startsWith("/");
+
     if (isS3Http || isKeyLikely) {
       (async () => {
         try {
@@ -105,6 +110,7 @@ const Chat = ({ contact, onClose }: ChatProps) => {
         cancelled = true;
       };
     }
+
     // regular http or API-relative path
     setResolvedAvatar(getImageUrl(v));
     return () => {
@@ -117,80 +123,95 @@ const Chat = ({ contact, onClose }: ChatProps) => {
     inputRef.current?.focus();
   }, []);
 
-  // Subscribe to real-time DMs with this peer (ONLY this thread)
-  const onIncoming = useCallback(
-    (msg: Msg) => {
-      setMessages((prev) => upsert(prev, msg));
-      // autoscroll on incoming
-      setTimeout(() => {
-        listRef.current?.scrollTo({
-          top: listRef.current.scrollHeight,
-          behavior: "smooth",
-        });
-      }, 0);
-    },
-    [upsert]
-  );
-  useChatThread(contact.id, meId, onIncoming);
-
-  // Track socket connection state and peer typing events
+  // Subscribe to socket messages for THIS thread (me <-> contact)
   useEffect(() => {
     setConnected(!!socket?.connected);
-    if (!socket) return;
+    if (!socket || !contact?.id || !meId) return;
+
+    const me = String(meId);
+    const peerId = String(contact.id);
 
     const onConnect = () => setConnected(true);
     const onDisconnect = () => setConnected(false);
     const onReconnect = () => setConnected(true);
 
-    // Peer typing handler (supports a couple of event shapes)
+    const handleIncomingMessage = (msg: Msg) => {
+      const senderId = asId(msg.sender);
+      const recipientId = asId(msg.recipient);
+
+      // Only messages where (sender,recipient) == (me,peer) or (peer,me)
+      const isMineToPeer =
+        senderId === me && recipientId === peerId;
+      const isPeerToMe =
+        senderId === peerId && recipientId === me;
+
+      if (!isMineToPeer && !isPeerToMe) return;
+
+      setMessages((prev) => upsert(prev, msg));
+      setTimeout(scrollToBottom, 0);
+    };
+
+    // Typing handlers
     const handleTyping = (p: any) => {
       const from = asId(p?.from ?? p?.sender);
       const to = asId(p?.to ?? p?.recipient);
-      const peerId = String(contact.id);
-      const me = String(meId);
-      if (from && from === peerId && (!to || to === me)) {
+      if (from === peerId && (!to || to === me)) {
         setPeerTyping(true);
         clearTimeout(typingTimerRef.current);
-        typingTimerRef.current = setTimeout(() => setPeerTyping(false), 2500);
+        typingTimerRef.current = setTimeout(
+          () => setPeerTyping(false),
+          2500
+        );
       }
     };
     const handleTypingStop = (p: any) => {
       const from = asId(p?.from ?? p?.sender);
-      const peerId = String(contact.id);
-      if (from && from === peerId) setPeerTyping(false);
+      if (from === peerId) setPeerTyping(false);
     };
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("reconnect", onReconnect);
+
+    // message events – match your test/chat-admin.js
+    socket.on("newMessage", handleIncomingMessage);
+    socket.on("chat:new", handleIncomingMessage);
+
+    // typing events
     socket.on("chat:typing", handleTyping);
     socket.on("typing", handleTyping); // legacy alias
     socket.on("chat:typing:stop", handleTypingStop);
 
-    // Optional thread subscription (no-op if server doesn't support)
+    // Optional thread subscription (if server supports)
     try {
-      if (contact?.id && meId) {
-        socket.emit("chat:subscribe", { with: contact.id });
-      }
+      socket.emit("chat:subscribe", { with: contact.id });
     } catch {}
 
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
       socket.off("reconnect", onReconnect);
+
+      socket.off("newMessage", handleIncomingMessage);
+      socket.off("chat:new", handleIncomingMessage);
+
       socket.off("chat:typing", handleTyping);
       socket.off("typing", handleTyping);
       socket.off("chat:typing:stop", handleTypingStop);
+
       try {
-        if (contact?.id && meId) socket.emit("chat:unsubscribe", { with: contact.id });
+        socket.emit("chat:unsubscribe", { with: contact.id });
       } catch {}
     };
-  }, [socket, contact?.id, meId]);
+  }, [socket, contact?.id, meId, upsert, scrollToBottom]);
 
   // Mark unread messages addressed to me as read (fire-and-forget)
   useEffect(() => {
     if (!meId) return;
-    const unreadToMe = messages.filter((m) => asId(m.recipient) === meId && !m.read);
+    const me = String(meId);
+    const unreadToMe = messages.filter(
+      (m) => asId(m.recipient) === me && !m.read
+    );
     if (unreadToMe.length) {
       const ids = unreadToMe.map((m) => m._id);
       apiClient.patch("/chat/mark-read", { messageIds: ids }).catch(() => {});
@@ -230,28 +251,32 @@ const Chat = ({ contact, onClose }: ChatProps) => {
       });
 
       const newMsg: Msg = res.data?.data?.message;
+
+      // Remove tmp + avoid dup if socket already delivered this message
       setMessages((prev) => {
         const withoutTmp = prev.filter((m) => m._id !== tmpId);
-        const idx = withoutTmp.findIndex((m) => String(m._id) === String(newMsg._id));
-        if (idx === -1) return [...withoutTmp, newMsg];
-        const copy = withoutTmp.slice();
-        copy[idx] = newMsg;
-        return copy;
+        const idx = withoutTmp.findIndex(
+          (m) => String(m._id) === String(newMsg._id)
+        );
+        if (idx !== -1) {
+          const copy = withoutTmp.slice();
+          copy[idx] = newMsg;
+          return copy;
+        }
+        return [...withoutTmp, newMsg];
       });
+
       // Notify peer that I'm not typing anymore
-      try { socket?.emit("chat:typing:stop", { to: contact.id }); } catch {}
+      try {
+        socket?.emit("chat:typing:stop", { to: contact.id });
+      } catch {}
     } catch (err) {
       console.error("Message send failed", err);
       // rollback optimistic on failure
       setMessages((prev) => prev.filter((m) => m._id !== tmpId));
       setMessage(text); // restore for retry
     } finally {
-      setTimeout(() => {
-        listRef.current?.scrollTo({
-          top: listRef.current.scrollHeight,
-          behavior: "smooth",
-        });
-      }, 0);
+      setTimeout(scrollToBottom, 0);
     }
   };
 
@@ -269,7 +294,9 @@ const Chat = ({ contact, onClose }: ChatProps) => {
     setMessage(v);
     if (v.trim()) emitTyping();
     else {
-      try { socket?.emit("chat:typing:stop", { to: contact.id }); } catch {}
+      try {
+        socket?.emit("chat:typing:stop", { to: contact.id });
+      } catch {}
     }
   };
 
@@ -303,7 +330,10 @@ const Chat = ({ contact, onClose }: ChatProps) => {
           const isTemp = String(msg._id).startsWith("tmp_");
           const when = msg.createdAt ? new Date(msg.createdAt) : undefined;
           const timeLabel = when
-            ? when.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+            ? when.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
             : "";
           return (
             <div
@@ -312,12 +342,22 @@ const Chat = ({ contact, onClose }: ChatProps) => {
             >
               <div
                 className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-                  isIncoming ? "bg-gray-100 text-[#1e1e38]" : "bg-[#22c55e] text-white"
+                  isIncoming
+                    ? "bg-gray-100 text-[#1e1e38]"
+                    : "bg-[#22c55e] text-white"
                 }`}
               >
-                <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-                <div className={`mt-1 flex items-center gap-1 ${isIncoming ? "text-gray-500" : "text-white/80"}`}>
-                  <span className="text-[10px] leading-none">{timeLabel}</span>
+                <p className="text-sm whitespace-pre-wrap break-words">
+                  {msg.content}
+                </p>
+                <div
+                  className={`mt-1 flex items-center gap-1 ${
+                    isIncoming ? "text-gray-500" : "text-white/80"
+                  }`}
+                >
+                  <span className="text-[10px] leading-none">
+                    {timeLabel}
+                  </span>
                   {isMine ? (
                     isTemp ? (
                       <MdAccessTime className="h-3 w-3" />
@@ -347,7 +387,9 @@ const Chat = ({ contact, onClose }: ChatProps) => {
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                (e.currentTarget.form as HTMLFormElement | null)?.requestSubmit();
+                (
+                  e.currentTarget.form as HTMLFormElement | null
+                )?.requestSubmit();
               }
             }}
             aria-label="Message"
@@ -356,7 +398,7 @@ const Chat = ({ contact, onClose }: ChatProps) => {
             type="submit"
             disabled={!message.trim()}
             className="p-2 bg-[#22c55e] text-white rounded-full hover:bg-[#1ea550] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+          >
             <MdSend className="h-5 w-5" />
           </button>
         </div>

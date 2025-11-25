@@ -3,7 +3,6 @@ const craUrl = process.env.REACT_APP_BACKEND_URL
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: craUrl,
-  // baseURL: "https://api.routeflex.co.uk/api/v1",
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
